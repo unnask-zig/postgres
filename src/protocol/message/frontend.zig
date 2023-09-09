@@ -15,4 +15,33 @@ const Allocator = std.mem.Allocator;
 //This way, we can build additional functionality to minimize the total number of
 //syscalls occurring (for example, by copying the whole message out when the
 //message is built, then reusing the byte buffer and never resizing unless necessary)
-pub fn bind(alloc: Allocator, buf: []u8, portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {}
+pub fn bind(alloc: Allocator, buf: []u8, portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {
+    _ = result_formats;
+    _ = values;
+    _ = formats;
+    _ = stmt;
+    _ = portal;
+    _ = buf;
+    _ = alloc;
+}
+
+//cancelRequest
+//close
+//copyData
+//copyDone
+//copyFail
+//describe
+//execute
+//flush
+//functionCall
+//gssencRequest
+//gssResponse
+//parse
+//passwordMessage
+//query
+//saslInitialResponse
+//saslResponse
+//sslRequest
+//startupMessage
+//sync
+//terminate
