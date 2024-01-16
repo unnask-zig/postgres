@@ -1,3 +1,23 @@
+const std = @import("std");
+
+const BackendMessage = union(enum) {
+    authenticationOk,
+
+    unsupported,
+};
+
+inline fn deserializeAuthentication(message: []const u8) BackendMessage {
+    _ = message;
+    return .authenticationOk;
+}
+
+pub fn deserialize(message: []const u8) BackendMessage {
+    return switch (message[0]) {
+        'R' => deserializeAuthentication(message),
+        else => .unsupported,
+    };
+}
+
 //authenticationOk
 //authenticationKerberosV5
 //authenticationCleartextPass
