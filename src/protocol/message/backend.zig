@@ -52,3 +52,11 @@ pub fn deserialize(message: []const u8) BackendMessage {
 //portalSuspended
 //readyForQuery
 //rowDescription
+
+test "BackendMessage.authenticationOK good message" {
+    const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 0 };
+
+    const des = deserialize(&msg);
+
+    try std.testing.expectEqual(des, BackendMessage.authenticationOk);
+}
