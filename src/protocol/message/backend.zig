@@ -11,7 +11,20 @@ inline fn deserializeAuthentication(message: []const u8) BackendMessage {
     return .authenticationOk;
 }
 
-pub fn deserialize(message: []const u8) BackendMessage {
+pub const PostgresDeserializeError = error{
+    InvalidLength,
+};
+
+pub fn deserialize(message: []const u8) !BackendMessage {
+    //todo - measure
+    //  std.mem.bytesAsValue vs std.mem.bytesToValue
+    //  (pointer)               (copied)
+    const len = std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, message[1..5]).*);
+
+    if (len + 1 != message.len) {
+        return PostgresDeserializeError.InvalidLength;
+    }
+
     return switch (message[0]) {
         'R' => deserializeAuthentication(message),
         else => .unsupported,
@@ -56,7 +69,7 @@ pub fn deserialize(message: []const u8) BackendMessage {
 test "BackendMessage.authenticationOK good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 0 };
 
-    const des = deserialize(&msg);
+    const des = try deserialize(&msg);
 
     try std.testing.expectEqual(des, BackendMessage.authenticationOk);
 }
