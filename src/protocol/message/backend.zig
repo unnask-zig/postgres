@@ -7,8 +7,15 @@ const BackendMessage = union(enum) {
 };
 
 inline fn deserializeAuthentication(message: []const u8) BackendMessage {
-    _ = message;
-    return .authenticationOk;
+    // The spec details that this is actually an int32, however, the max
+    // value is 12, so no need to do this extra work for the moment.
+    //const msgType = std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, message[5..9]).*);
+    const msgType = message[8];
+    switch (msgType) {
+        0 => return .authenticationOk,
+        else => return .unsupported,
+    }
+    return .unsupported;
 }
 
 pub const PostgresDeserializeError = error{
