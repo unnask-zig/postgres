@@ -1,8 +1,14 @@
 const std = @import("std");
 
+const AuthenticationMD5Password = struct {
+    salt: [4]u8 = undefined,
+};
+
 const BackendMessage = union(enum) {
     authenticationOk,
-
+    authenticationCleartextPass,
+    //kerberos
+    authenticationMD5Pass: AuthenticationMD5Password,
     unsupported,
 };
 
@@ -13,6 +19,13 @@ inline fn deserializeAuthentication(message: []const u8) BackendMessage {
     const msgType = message[8];
     switch (msgType) {
         0 => return .authenticationOk,
+        2 => return .unsupported, //kerberos
+        3 => return .authenticationCleartextPass,
+        5 => {
+            var tmp = AuthenticationMD5Password{};
+            @memcpy(&tmp.salt, message[9..13]);
+            return BackendMessage{ .authenticationMD5Pass = tmp };
+        },
         else => return .unsupported,
     }
     return .unsupported;
@@ -79,4 +92,22 @@ test "BackendMessage.authenticationOK good message" {
     const des = try deserialize(&msg);
 
     try std.testing.expectEqual(des, BackendMessage.authenticationOk);
+}
+
+test "BackendMessage.authenticationCleartextPass good message" {
+    const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 3 };
+
+    const des = try deserialize(&msg);
+
+    try std.testing.expectEqual(des, BackendMessage.authenticationCleartextPass);
+}
+
+test "BackendMessage.authenticationMD5Pass good message" {
+    const msg = [_]u8{ 'R', 0, 0, 0, 12, 0, 0, 0, 5, 1, 2, 3, 4 };
+
+    const des = try deserialize(&msg);
+    var tmp = AuthenticationMD5Password{};
+    tmp.salt = [4]u8{ 1, 2, 3, 4 };
+
+    try std.testing.expectEqual(des, BackendMessage{ .authenticationMD5Pass = tmp });
 }
