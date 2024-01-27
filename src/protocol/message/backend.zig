@@ -58,11 +58,16 @@ pub const PostgresDeserializeError = error{
     InvalidLength,
 };
 
+inline fn bigToType(comptime T: type, bytes: []const u8) T {
+    return std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, bytes).*);
+}
+
 pub fn deserialize(message: []const u8) !BackendMessage {
     //todo - measure
     //  std.mem.bytesAsValue vs std.mem.bytesToValue
     //  (pointer)               (copied)
-    const len = std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, message[1..5]).*);
+    //const len = std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, message[1..5]).*);
+    const len = bigToType(i32, message[1..5]);
 
     if (len + 1 != message.len) {
         return PostgresDeserializeError.InvalidLength;
