@@ -59,7 +59,7 @@ pub const PostgresDeserializeError = error{
 };
 
 inline fn bigToType(comptime T: type, bytes: []const u8) T {
-    return std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, bytes).*);
+    return std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, bytes[0..@sizeOf(T)]).*);
 }
 
 pub fn deserialize(message: []const u8) !BackendMessage {
