@@ -1,10 +1,12 @@
 const std = @import("std");
 
+const FixedBuffer = std.io.FixedBufferStream([]const u8);
+
 const AuthMD5Password = struct {
     salt: [4]u8 = undefined,
 };
 
-const BackendKeyData = struct {
+const KeyData = struct {
     process: i32,
     secret: i32,
 };
@@ -17,6 +19,7 @@ const BackendMessage = union(enum) {
     //authSCMCred,
     //authGSS,
     //authGSSContinue,
+    keyData: KeyData,
     unsupported,
 };
 
@@ -28,53 +31,54 @@ const BackendMessage = union(enum) {
 //authSASL
 //authSASLContinue
 //authSASLFinal
-inline fn deserializeauth(message: []const u8) BackendMessage {
+inline fn deserializeAuth(reader: FixedBuffer.Reader) BackendMessage {
     // The spec details that this is actually an int32, however, the max
     // value is 12, so no need to do this extra work for the moment.
-    //const msgType = std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, message[5..9]).*);
-    const msgType = message[8];
-    switch (msgType) {
-        0 => return .authOk,
-        2 => return .unsupported, //kerberos
-        3 => return .authCleartextPass,
+    const msgType = reader.readIntBig(i32) catch unreachable;
+    return switch (msgType) {
+        0 => .authOk,
+        2 => .unsupported, //kerberos
+        3 => .authCleartextPass,
         5 => {
             var tmp = AuthMD5Password{};
-            @memcpy(&tmp.salt, message[9..13]);
+            _ = reader.read(&tmp.salt) catch unreachable;
             return BackendMessage{ .authMD5Pass = tmp };
         },
-        6 => return .unsupported, //authSCMCredential
-        7 => return .unsupported, //authGSS
-        8 => return .unsupported, //authGSSContinue
-        9 => return .unsupported, //authSSPI
-        10 => return .unsupported, //authSASL
-        11 => return .unsupported, //authSASLContinue
-        12 => return .unsupported, //authSASLFinal
-        else => return .unsupported,
-    }
-    return .unsupported;
+        6 => .unsupported, //authSCMCredential
+        7 => .unsupported, //authGSS
+        8 => .unsupported, //authGSSContinue
+        9 => .unsupported, //authSSPI
+        10 => .unsupported, //authSASL
+        11 => .unsupported, //authSASLContinue
+        12 => .unsupported, //authSASLFinal
+        else => .unsupported,
+    };
 }
 
-pub const PostgresDeserializeError = error{
-    InvalidLength,
-};
+pub const PostgresDeserializeError = error{ MsgLength, BufferLength };
 
 inline fn bigToType(comptime T: type, bytes: []const u8) T {
     return std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, bytes[0..@sizeOf(T)]).*);
 }
 
 pub fn deserialize(message: []const u8) !BackendMessage {
-    //todo - measure
-    //  std.mem.bytesAsValue vs std.mem.bytesToValue
-    //  (pointer)               (copied)
-    //const len = std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, message[1..5]).*);
-    const len = bigToType(i32, message[1..5]);
+    if (message.len < 5) {
+        return PostgresDeserializeError.MsgLength;
+    }
 
-    if (len + 1 != message.len) {
-        return PostgresDeserializeError.InvalidLength;
+    var fbs = FixedBuffer{
+        .buffer = message,
+        .pos = 1,
+    };
+    var reader = fbs.reader();
+    const msgLen = try reader.readIntBig(i32);
+
+    if (msgLen > message.len) {
+        return PostgresDeserializeError.BufferLength;
     }
 
     return switch (message[0]) {
-        'R' => deserializeauth(message),
+        'R' => return deserializeAuth(reader),
         'K' => .unsupported,
         else => .unsupported,
     };
