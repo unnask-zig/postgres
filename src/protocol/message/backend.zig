@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const FixedBuffer = std.io.FixedBufferStream([]const u8);
+// FixedBuffer.Reader is the type of the reader.
 
 const AuthMD5Password = struct {
     salt: [4]u8 = undefined,
@@ -31,17 +32,17 @@ const BackendMessage = union(enum) {
 //authSASL
 //authSASLContinue
 //authSASLFinal
-inline fn deserializeAuth(reader: FixedBuffer.Reader) BackendMessage {
+inline fn deserializeAuth(message: []const u8) BackendMessage {
     // The spec details that this is actually an int32, however, the max
     // value is 12, so no need to do this extra work for the moment.
-    const msgType = reader.readIntBig(i32) catch unreachable;
+    const msgType = message[8];
     return switch (msgType) {
         0 => .authOk,
         2 => .unsupported, //kerberos
         3 => .authCleartextPass,
         5 => {
             var tmp = AuthMD5Password{};
-            _ = reader.read(&tmp.salt) catch unreachable;
+            @memcpy(&tmp.salt, message[9..13]);
             return BackendMessage{ .authMD5Pass = tmp };
         },
         6 => .unsupported, //authSCMCredential
@@ -66,19 +67,28 @@ pub fn deserialize(message: []const u8) !BackendMessage {
         return PostgresDeserializeError.MsgLength;
     }
 
-    var fbs = FixedBuffer{
-        .buffer = message,
-        .pos = 1,
-    };
-    var reader = fbs.reader();
-    const msgLen = try reader.readIntBig(i32);
+    // Wondering if this is actually the way to go. Fixed buffer almost
+    // definitely adds overhead, but it is also easier to manage.
+    //var fbs = FixedBuffer{
+    //    .buffer = message,
+    //    .pos = 1,
+    //};
+    //var reader = fbs.reader();
+    //const msgLen = try reader.readIntBig(i32);
 
+    //if (msgLen > message.len) {
+    //    return PostgresDeserializeError.BufferLength;
+    //}
+
+    // I think it will be better to direct read the buffer here, then in the
+    // storage reads, use a fixed buffer there.
+    const msgLen = bigToType(i32, message[1..5]) + 1;
     if (msgLen > message.len) {
         return PostgresDeserializeError.BufferLength;
     }
 
     return switch (message[0]) {
-        'R' => return deserializeAuth(reader),
+        'R' => return deserializeAuth(message),
         'K' => .unsupported,
         else => .unsupported,
     };
