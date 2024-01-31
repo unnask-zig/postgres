@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 
 const FixedBuffer = std.io.FixedBufferStream([]const u8);
 // FixedBuffer.Reader is the type of the reader.
@@ -62,7 +63,8 @@ inline fn bigToType(comptime T: type, bytes: []const u8) T {
     return std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, bytes[0..@sizeOf(T)]).*);
 }
 
-pub fn deserialize(message: []const u8) !BackendMessage {
+pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
+    _ = allocator;
     if (message.len < 5) {
         return PostgresDeserializeError.MsgLength;
     }
@@ -89,7 +91,12 @@ pub fn deserialize(message: []const u8) !BackendMessage {
 
     return switch (message[0]) {
         'R' => return deserializeAuth(message),
-        'K' => .unsupported,
+        'K' => {
+            return BackendMessage{ .keyData = .{
+                .process = bigToType(i32, message[6..10]),
+                .secret = bigToType(i32, message[10..15]),
+            } };
+        },
         else => .unsupported,
     };
 }
@@ -121,7 +128,7 @@ pub fn deserialize(message: []const u8) !BackendMessage {
 test "BackendMessage.authOK good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 0 };
 
-    const des = try deserialize(&msg);
+    const des = try deserialize(std.testing.allocator, &msg);
 
     try std.testing.expectEqual(des, BackendMessage.authOk);
 }
@@ -129,7 +136,7 @@ test "BackendMessage.authOK good message" {
 test "BackendMessage.authCleartextPass good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 3 };
 
-    const des = try deserialize(&msg);
+    const des = try deserialize(std.testing.allocator, &msg);
 
     try std.testing.expectEqual(des, BackendMessage.authCleartextPass);
 }
@@ -137,7 +144,7 @@ test "BackendMessage.authCleartextPass good message" {
 test "BackendMessage.authMD5Pass good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 12, 0, 0, 0, 5, 1, 2, 3, 4 };
 
-    const des = try deserialize(&msg);
+    const des = try deserialize(std.testing.allocator, &msg);
     var tmp = AuthMD5Password{};
     tmp.salt = [4]u8{ 1, 2, 3, 4 };
 
