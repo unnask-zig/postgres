@@ -22,6 +22,7 @@ const BackendMessage = union(enum) {
     //authGSS,
     //authGSSContinue,
     keyData: KeyData,
+    bindComplete,
     unsupported,
 };
 
@@ -93,15 +94,15 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         'R' => return deserializeAuth(message),
         'K' => {
             return BackendMessage{ .keyData = .{
-                .process = bigToType(i32, message[6..10]),
-                .secret = bigToType(i32, message[10..15]),
+                .process = bigToType(i32, message[5..9]),
+                .secret = bigToType(i32, message[9..13]),
             } };
         },
+        '2' => .bindComplete,
         else => .unsupported,
     };
 }
 
-//backendKeyData
 //bindComplete
 //closeComplete
 //commandComplete
@@ -149,4 +150,24 @@ test "BackendMessage.authMD5Pass good message" {
     tmp.salt = [4]u8{ 1, 2, 3, 4 };
 
     try std.testing.expectEqual(des, BackendMessage{ .authMD5Pass = tmp });
+}
+
+test "BackendMessage.keyData good message" {
+    const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    var tmp = KeyData{
+        .process = 257,
+        .secret = 258,
+    };
+
+    try std.testing.expectEqual(des, BackendMessage{ .keyData = tmp });
+}
+
+test "BackendMessage.bindComplete good message" {
+    const msg = [_]u8{ '2', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.bindComplete);
 }
