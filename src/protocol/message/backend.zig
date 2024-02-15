@@ -13,6 +13,10 @@ const KeyData = struct {
     secret: i32,
 };
 
+const CommandComplete = struct {
+    tag: []const u8,
+};
+
 const BackendMessage = union(enum) {
     authOk,
     authCleartextPass,
@@ -23,6 +27,7 @@ const BackendMessage = union(enum) {
     //authGSSContinue,
     keyData: KeyData,
     bindComplete,
+    closeComplete,
     unsupported,
 };
 
@@ -99,12 +104,15 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             } };
         },
         '2' => .bindComplete,
+        '3' => .closeComplete,
+        'C'  => {
+            const tag = allocator.alloc(u8, msgLen - 4);
+
+    },
         else => .unsupported,
     };
 }
 
-//bindComplete
-//closeComplete
 //commandComplete
 //copyData
 //copyDone
@@ -156,7 +164,7 @@ test "BackendMessage.keyData good message" {
     const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    var tmp = KeyData{
+    const tmp = KeyData{
         .process = 257,
         .secret = 258,
     };
@@ -170,4 +178,12 @@ test "BackendMessage.bindComplete good message" {
     const des = try deserialize(std.testing.allocator, &msg);
 
     try std.testing.expectEqual(des, BackendMessage.bindComplete);
+}
+
+test "BackendMessage.closeComplete good message" {
+    const msg = [_]u8{ '3', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.closeComplete);
 }
