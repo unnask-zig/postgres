@@ -70,7 +70,6 @@ inline fn bigToType(comptime T: type, bytes: []const u8) T {
 }
 
 pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
-    _ = allocator;
     if (message.len < 5) {
         return PostgresDeserializeError.MsgLength;
     }
@@ -105,10 +104,11 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         },
         '2' => .bindComplete,
         '3' => .closeComplete,
-        'C'  => {
-            const tag = allocator.alloc(u8, msgLen - 4);
-
-    },
+        'C' => {
+            const tag = allocator.alloc(u8, @as(usize, msgLen - 4));
+            @memcpy(tag, message[5..]);
+            return BackendMessage{ .commandComplete = .{ .tag = tag } };
+        },
         else => .unsupported,
     };
 }
@@ -182,6 +182,14 @@ test "BackendMessage.bindComplete good message" {
 
 test "BackendMessage.closeComplete good message" {
     const msg = [_]u8{ '3', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.closeComplete);
+}
+
+test "BackendMessage.commandComplete good message" {
+    const msg = [_]u8{ 'C', 0, 0, 0, 4, 'i' };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
