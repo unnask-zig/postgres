@@ -28,6 +28,7 @@ const BackendMessage = union(enum) {
     keyData: KeyData,
     bindComplete,
     closeComplete,
+    commandComplete: CommandComplete,
     unsupported,
 };
 
@@ -105,7 +106,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         '2' => .bindComplete,
         '3' => .closeComplete,
         'C' => {
-            const tag = allocator.alloc(u8, @as(usize, msgLen - 4));
+            const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(tag, message[5..]);
             return BackendMessage{ .commandComplete = .{ .tag = tag } };
         },
@@ -189,9 +190,14 @@ test "BackendMessage.closeComplete good message" {
 }
 
 test "BackendMessage.commandComplete good message" {
-    const msg = [_]u8{ 'C', 0, 0, 0, 4, 'i' };
+    const msg = [_]u8{ 'C', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.commandComplete.tag);
 
-    try std.testing.expectEqual(des, BackendMessage.closeComplete);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.commandComplete);
+    switch (des) {
+        .commandComplete => |cc| try std.testing.expect(std.mem.eql(u8, cc.tag, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
 }
