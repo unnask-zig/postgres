@@ -17,6 +17,10 @@ const CommandComplete = struct {
     tag: []const u8,
 };
 
+const CopyData = struct {
+    storage: []const u8,
+};
+
 const BackendMessage = union(enum) {
     authOk,
     authCleartextPass,
@@ -29,6 +33,7 @@ const BackendMessage = union(enum) {
     bindComplete,
     closeComplete,
     commandComplete: CommandComplete,
+    copyData: CopyData,
     unsupported,
 };
 
@@ -109,6 +114,11 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(tag, message[5..]);
             return BackendMessage{ .commandComplete = .{ .tag = tag } };
+        },
+        'd' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..]);
+            return BackendMessage{ .copyData = .{ .storage = storage } };
         },
         else => .unsupported,
     };
@@ -198,6 +208,19 @@ test "BackendMessage.commandComplete good message" {
     try std.testing.expect(@as(BackendMessage, des) == BackendMessage.commandComplete);
     switch (des) {
         .commandComplete => |cc| try std.testing.expect(std.mem.eql(u8, cc.tag, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.copyData good message" {
+    const msg = [_]u8{ 'd', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.copyData.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyData);
+    switch (des) {
+        .copyData => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
