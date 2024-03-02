@@ -34,6 +34,7 @@ const BackendMessage = union(enum) {
     closeComplete,
     commandComplete: CommandComplete,
     copyData: CopyData,
+    copyDone,
     unsupported,
 };
 
@@ -120,6 +121,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             @memcpy(storage, message[5..]);
             return BackendMessage{ .copyData = .{ .storage = storage } };
         },
+        'c' => .copyDone,
         else => .unsupported,
     };
 }
@@ -223,4 +225,12 @@ test "BackendMessage.copyData good message" {
         .copyData => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
+}
+
+test "BackendMessage.copyDone good message" {
+    const msg = [_]u8{ 'c', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.copyDone);
 }
