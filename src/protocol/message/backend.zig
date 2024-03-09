@@ -21,7 +21,7 @@ const CopyData = struct {
     storage: []const u8,
 };
 
-const CopyInResponse = struct {
+const CopyResponse = struct {
     storage: []const u8,
 };
 
@@ -39,7 +39,8 @@ const BackendMessage = union(enum) {
     commandComplete: CommandComplete,
     copyData: CopyData,
     copyDone,
-    copyInResponse: CopyInResponse,
+    copyInResponse: CopyResponse,
+    copyOutResponse: CopyResponse,
     unsupported,
 };
 
@@ -101,7 +102,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
 
     // I think it will be better to direct read the buffer here, then in the
     // storage reads, use a fixed buffer there.
-    const msgLen = bigToType(i32, message[1..5]) + 1;
+    const msgLen: usize = @intCast(bigToType(i32, message[1..5]) + 1);
     if (msgLen > message.len) {
         return PostgresDeserializeError.BufferLength;
     }
@@ -118,19 +119,24 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         '3' => .closeComplete,
         'C' => {
             const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(tag, message[5..]);
+            @memcpy(tag, message[5..msgLen]);
             return BackendMessage{ .commandComplete = .{ .tag = tag } };
         },
         'd' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..]);
+            @memcpy(storage, message[5..msgLen]);
             return BackendMessage{ .copyData = .{ .storage = storage } };
         },
         'c' => .copyDone,
         'G' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..]);
+            @memcpy(storage, message[5..msgLen]);
             return BackendMessage{ .copyInResponse = .{ .storage = storage } };
+        },
+        'H' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .copyOutResponse = .{ .storage = storage } };
         },
         else => .unsupported,
     };
@@ -250,6 +256,19 @@ test "BackendMessage.copyInResponse good message" {
     try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyInResponse);
     switch (des) {
         .copyInResponse => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.copyOutResponse good message" {
+    const msg = [_]u8{ 'H', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.copyOutResponse.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyOutResponse);
+    switch (des) {
+        .copyOutResponse => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
