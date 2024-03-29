@@ -25,6 +25,10 @@ const CopyResponse = struct {
     storage: []const u8,
 };
 
+const DataRow = struct {
+    storage: []const u8,
+};
+
 const BackendMessage = union(enum) {
     authOk,
     authCleartextPass,
@@ -42,6 +46,7 @@ const BackendMessage = union(enum) {
     copyInResponse: CopyResponse,
     copyOutResponse: CopyResponse,
     copyBothResponse: CopyResponse,
+    dataRow: DataRow,
     unsupported,
 };
 
@@ -81,6 +86,13 @@ pub const PostgresDeserializeError = error{ MsgLength, BufferLength };
 
 inline fn bigToType(comptime T: type, bytes: []const u8) T {
     return std.mem.bigToNative(i32, std.mem.bytesAsValue(i32, bytes[0..@sizeOf(T)]).*);
+}
+
+inline fn createStorageBuffer(allocator: Allocator, len: usize, message: []const u8) ![]const u8 {
+    const storage = try allocator.alloc(u8, len - 5);
+    @memcpy(storage, message[5..len]);
+
+    return storage;
 }
 
 pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
@@ -143,6 +155,9 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(storage, message[5..msgLen]);
             return BackendMessage{ .copyBothResponse = .{ .storage = storage } };
+        },
+        'D' => {
+            return BackendMessage{ .dataRow = .{ .storage = try createStorageBuffer(allocator, @intCast(msgLen), message) } };
         },
         else => .unsupported,
     };
@@ -286,6 +301,19 @@ test "BackendMessage.copyBothResponse good message" {
     try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyBothResponse);
     switch (des) {
         .copyBothResponse => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.dataRow good message" {
+    const msg = [_]u8{ 'D', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.dataRow.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.dataRow);
+    switch (des) {
+        .dataRow => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
