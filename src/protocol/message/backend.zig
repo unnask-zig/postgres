@@ -30,23 +30,23 @@ const DataRow = struct {
 };
 
 const BackendMessage = union(enum) {
-    authOk,
-    authCleartextPass,
+    auth_ok,
+    auth_cleartext_pass,
     //authKerberosV5,
-    authMD5Pass: AuthMD5Password,
+    auth_md5_pass: AuthMD5Password,
     //authSCMCred,
     //authGSS,
     //authGSSContinue,
-    keyData: KeyData,
-    bindComplete,
-    closeComplete,
-    commandComplete: CommandComplete,
-    copyData: CopyData,
-    copyDone,
-    copyInResponse: CopyResponse,
+    key_data: KeyData,
+    bind_complete,
+    close_complete,
+    command_complete: CommandComplete,
+    copy_data: CopyData,
+    copy_done,
+    copy_in_response: CopyResponse,
     copyOutResponse: CopyResponse,
-    copyBothResponse: CopyResponse,
-    dataRow: DataRow,
+    copy_both_response: CopyResponse,
+    data_row: DataRow,
     unsupported,
 };
 
@@ -63,13 +63,13 @@ inline fn deserializeAuth(message: []const u8) BackendMessage {
     // value is 12, so no need to do this extra work for the moment.
     const msgType = message[8];
     return switch (msgType) {
-        0 => .authOk,
+        0 => .auth_ok,
         2 => .unsupported, //kerberos
-        3 => .authCleartextPass,
+        3 => .auth_cleartext_pass,
         5 => {
             var tmp = AuthMD5Password{};
             @memcpy(&tmp.salt, message[9..13]);
-            return BackendMessage{ .authMD5Pass = tmp };
+            return BackendMessage{ .auth_md5_pass = tmp };
         },
         6 => .unsupported, //authSCMCredential
         7 => .unsupported, //authGSS
@@ -123,28 +123,28 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
     return switch (message[0]) {
         'R' => return deserializeAuth(message),
         'K' => {
-            return BackendMessage{ .keyData = .{
+            return BackendMessage{ .key_data = .{
                 .process = bigToType(i32, message[5..9]),
                 .secret = bigToType(i32, message[9..13]),
             } };
         },
-        '2' => .bindComplete,
-        '3' => .closeComplete,
+        '2' => .bind_complete,
+        '3' => .close_complete,
         'C' => {
             const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(tag, message[5..msgLen]);
-            return BackendMessage{ .commandComplete = .{ .tag = tag } };
+            return BackendMessage{ .command_complete = .{ .tag = tag } };
         },
         'd' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(storage, message[5..msgLen]);
-            return BackendMessage{ .copyData = .{ .storage = storage } };
+            return BackendMessage{ .copy_data = .{ .storage = storage } };
         },
-        'c' => .copyDone,
+        'c' => .copy_done,
         'G' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(storage, message[5..msgLen]);
-            return BackendMessage{ .copyInResponse = .{ .storage = storage } };
+            return BackendMessage{ .copy_in_response = .{ .storage = storage } };
         },
         'H' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
@@ -154,16 +154,16 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         'W' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(storage, message[5..msgLen]);
-            return BackendMessage{ .copyBothResponse = .{ .storage = storage } };
+            return BackendMessage{ .copy_both_response = .{ .storage = storage } };
         },
         'D' => {
-            return BackendMessage{ .dataRow = .{ .storage = try createStorageBuffer(allocator, @intCast(msgLen), message) } };
+            return BackendMessage{ .data_row = .{ .storage = try createStorageBuffer(allocator, @intCast(msgLen), message) } };
         },
         else => .unsupported,
     };
 }
 
-//dataRow
+//data_row
 //emptyQueryResponse
 //errorResponse
 //functionCallResponse
@@ -178,33 +178,33 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
 //readyForQuery
 //rowDescription
 
-test "BackendMessage.authOK good message" {
+test "BackendMessage.auth_ok good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 0 };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
-    try std.testing.expectEqual(des, BackendMessage.authOk);
+    try std.testing.expectEqual(des, BackendMessage.auth_ok);
 }
 
-test "BackendMessage.authCleartextPass good message" {
+test "BackendMessage.auth_cleartext_pass good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 3 };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
-    try std.testing.expectEqual(des, BackendMessage.authCleartextPass);
+    try std.testing.expectEqual(des, BackendMessage.auth_cleartext_pass);
 }
 
-test "BackendMessage.authMD5Pass good message" {
+test "BackendMessage.auth_md5_pass good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 12, 0, 0, 0, 5, 1, 2, 3, 4 };
 
     const des = try deserialize(std.testing.allocator, &msg);
     var tmp = AuthMD5Password{};
     tmp.salt = [4]u8{ 1, 2, 3, 4 };
 
-    try std.testing.expectEqual(des, BackendMessage{ .authMD5Pass = tmp });
+    try std.testing.expectEqual(des, BackendMessage{ .auth_md5_pass = tmp });
 }
 
-test "BackendMessage.keyData good message" {
+test "BackendMessage.key_data good message" {
     const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
 
     const des = try deserialize(std.testing.allocator, &msg);
@@ -213,68 +213,68 @@ test "BackendMessage.keyData good message" {
         .secret = 258,
     };
 
-    try std.testing.expectEqual(des, BackendMessage{ .keyData = tmp });
+    try std.testing.expectEqual(des, BackendMessage{ .key_data = tmp });
 }
 
-test "BackendMessage.bindComplete good message" {
+test "BackendMessage.bind_complete good message" {
     const msg = [_]u8{ '2', 0, 0, 0, 4 };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
-    try std.testing.expectEqual(des, BackendMessage.bindComplete);
+    try std.testing.expectEqual(des, BackendMessage.bind_complete);
 }
 
-test "BackendMessage.closeComplete good message" {
+test "BackendMessage.close_complete good message" {
     const msg = [_]u8{ '3', 0, 0, 0, 4 };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
-    try std.testing.expectEqual(des, BackendMessage.closeComplete);
+    try std.testing.expectEqual(des, BackendMessage.close_complete);
 }
 
-test "BackendMessage.commandComplete good message" {
+test "BackendMessage.command_complete good message" {
     const msg = [_]u8{ 'C', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    defer std.testing.allocator.free(des.commandComplete.tag);
+    defer std.testing.allocator.free(des.command_complete.tag);
 
-    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.commandComplete);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.command_complete);
     switch (des) {
-        .commandComplete => |cc| try std.testing.expect(std.mem.eql(u8, cc.tag, "insert")),
+        .command_complete => |cc| try std.testing.expect(std.mem.eql(u8, cc.tag, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
 
-test "BackendMessage.copyData good message" {
+test "BackendMessage.copy_data good message" {
     const msg = [_]u8{ 'd', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    defer std.testing.allocator.free(des.copyData.storage);
+    defer std.testing.allocator.free(des.copy_data.storage);
 
-    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyData);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_data);
     switch (des) {
-        .copyData => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        .copy_data => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
 
-test "BackendMessage.copyDone good message" {
+test "BackendMessage.copy_done good message" {
     const msg = [_]u8{ 'c', 0, 0, 0, 4 };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
-    try std.testing.expectEqual(des, BackendMessage.copyDone);
+    try std.testing.expectEqual(des, BackendMessage.copy_done);
 }
 
-test "BackendMessage.copyInResponse good message" {
+test "BackendMessage.copy_in_response good message" {
     const msg = [_]u8{ 'G', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    defer std.testing.allocator.free(des.copyInResponse.storage);
+    defer std.testing.allocator.free(des.copy_in_response.storage);
 
-    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyInResponse);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_in_response);
     switch (des) {
-        .copyInResponse => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        .copy_in_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
@@ -292,28 +292,28 @@ test "BackendMessage.copyOutResponse good message" {
     }
 }
 
-test "BackendMessage.copyBothResponse good message" {
+test "BackendMessage.copy_both_response good message" {
     const msg = [_]u8{ 'W', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    defer std.testing.allocator.free(des.copyBothResponse.storage);
+    defer std.testing.allocator.free(des.copy_both_response.storage);
 
-    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyBothResponse);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_both_response);
     switch (des) {
-        .copyBothResponse => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        .copy_both_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
 
-test "BackendMessage.dataRow good message" {
+test "BackendMessage.data_row good message" {
     const msg = [_]u8{ 'D', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    defer std.testing.allocator.free(des.dataRow.storage);
+    defer std.testing.allocator.free(des.data_row.storage);
 
-    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.dataRow);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.data_row);
     switch (des) {
-        .dataRow => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        .data_row => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
