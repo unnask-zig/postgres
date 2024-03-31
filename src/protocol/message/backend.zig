@@ -1,7 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const FixedBuffer = std.io.FixedBufferStream([]const u8);
+// const FixedBuffer = std.io.FixedBufferStream([]const u8);
 // FixedBuffer.Reader is the type of the reader.
 
 const AuthMD5Password = struct {
@@ -44,7 +44,7 @@ const BackendMessage = union(enum) {
     copy_data: CopyData,
     copy_done,
     copy_in_response: CopyResponse,
-    copyOutResponse: CopyResponse,
+    copy_out_response: CopyResponse,
     copy_both_response: CopyResponse,
     data_row: DataRow,
     unsupported,
@@ -149,7 +149,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         'H' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
             @memcpy(storage, message[5..msgLen]);
-            return BackendMessage{ .copyOutResponse = .{ .storage = storage } };
+            return BackendMessage{ .copy_out_response = .{ .storage = storage } };
         },
         'W' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
@@ -279,15 +279,15 @@ test "BackendMessage.copy_in_response good message" {
     }
 }
 
-test "BackendMessage.copyOutResponse good message" {
+test "BackendMessage.copy_out_response good message" {
     const msg = [_]u8{ 'H', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    defer std.testing.allocator.free(des.copyOutResponse.storage);
+    defer std.testing.allocator.free(des.copy_out_response.storage);
 
-    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copyOutResponse);
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_out_response);
     switch (des) {
-        .copyOutResponse => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        .copy_out_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
