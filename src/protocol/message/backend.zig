@@ -29,6 +29,30 @@ const DataRow = struct {
     storage: []const u8,
 };
 
+const ErrorResponse = struct {
+    storage: []const u8,
+};
+
+const FunctionCallResponse = struct {
+    storage: []const u8,
+};
+
+const NegotiateProtocolVersion = struct {
+    storage: []const u8,
+};
+
+const NoticeResponse = struct {
+    storage: []const u8,
+};
+
+const NotificationResponse = struct {
+    storage: []const u8,
+};
+
+const ParameterDescription = struct {
+    storage: []const u8,
+};
+
 const BackendMessage = union(enum) {
     auth_ok,
     auth_cleartext_pass,
@@ -47,6 +71,14 @@ const BackendMessage = union(enum) {
     copy_out_response: CopyResponse,
     copy_both_response: CopyResponse,
     data_row: DataRow,
+    empty_query_response,
+    error_response: ErrorResponse,
+    function_call_response: FunctionCallResponse,
+    negotiate_protocol_version: NegotiateProtocolVersion,
+    no_data,
+    notice_response: NoticeResponse,
+    notification_response: NotificationResponse,
+    parameter_description: ParameterDescription,
     unsupported,
 };
 
@@ -159,19 +191,42 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         'D' => {
             return BackendMessage{ .data_row = .{ .storage = try createStorageBuffer(allocator, @intCast(msgLen), message) } };
         },
+        'I' => .empty_query_response,
+        'E' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .error_response = .{ .storage = storage } };
+        },
+        'V' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .function_call_response = .{ .storage = storage } };
+        },
+        'v' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .negotiate_protocol_version = .{ .storage = storage } };
+        },
+        'n' => .no_data,
+        'N' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .notice_response = .{ .storage = storage } };
+        },
+        'A' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .notification_response = .{ .storage = storage } };
+        },
+        't' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .parameter_description = .{ .storage = storage } };
+        },
         else => .unsupported,
     };
 }
 
-//data_row
-//emptyQueryResponse
-//errorResponse
-//functionCallResponse
-//negotiateProtocolVersion
-//noData
-//noticeResponse
-//notificationResponse
-//parameterDescription
 //parameterStatus
 //parseComplete
 //portalSuspended
@@ -314,6 +369,100 @@ test "BackendMessage.data_row good message" {
     try std.testing.expect(@as(BackendMessage, des) == BackendMessage.data_row);
     switch (des) {
         .data_row => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.empty_query_response good message" {
+    const msg = [_]u8{ 'I', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.empty_query_response);
+}
+
+test "BackendMessage.error_response good message" {
+    const msg = [_]u8{ 'E', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.error_response.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.error_response);
+    switch (des) {
+        .error_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.function_call_response good message" {
+    const msg = [_]u8{ 'V', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.function_call_response.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.function_call_response);
+    switch (des) {
+        .function_call_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.negotiate_protocol_version good message" {
+    const msg = [_]u8{ 'v', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.negotiate_protocol_version.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.negotiate_protocol_version);
+    switch (des) {
+        .negotiate_protocol_version => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.no_data good message" {
+    const msg = [_]u8{ 'n', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.no_data);
+}
+
+test "BackendMessage.notice_response good message" {
+    const msg = [_]u8{ 'N', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.notice_response.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.notice_response);
+    switch (des) {
+        .notice_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.notification_response good message" {
+    const msg = [_]u8{ 'A', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.notification_response.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.notification_response);
+    switch (des) {
+        .notification_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.parameter_description good message" {
+    const msg = [_]u8{ 't', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.parameter_description.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_description);
+    switch (des) {
+        .parameter_description => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
