@@ -53,6 +53,10 @@ const ParameterDescription = struct {
     storage: []const u8,
 };
 
+const ParameterStatus = struct {
+    storage: []const u8,
+};
+
 const BackendMessage = union(enum) {
     auth_ok,
     auth_cleartext_pass,
@@ -79,9 +83,18 @@ const BackendMessage = union(enum) {
     notice_response: NoticeResponse,
     notification_response: NotificationResponse,
     parameter_description: ParameterDescription,
+    parameter_status: ParameterStatus,
     unsupported,
 };
 
+//parseComplete
+//portalSuspended
+//readyForQuery
+//rowDescription
+
+//
+//
+//
 //authKerberosV5
 //authSCMCredential
 //authGSS
@@ -223,15 +236,14 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             @memcpy(storage, message[5..msgLen]);
             return BackendMessage{ .parameter_description = .{ .storage = storage } };
         },
+        'S' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .parameter_status = .{ .storage = storage } };
+        },
         else => .unsupported,
     };
 }
-
-//parameterStatus
-//parseComplete
-//portalSuspended
-//readyForQuery
-//rowDescription
 
 test "BackendMessage.auth_ok good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 8, 0, 0, 0, 0 };
@@ -463,6 +475,19 @@ test "BackendMessage.parameter_description good message" {
     try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_description);
     switch (des) {
         .parameter_description => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.parameter_status good message" {
+    const msg = [_]u8{ 'S', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.parameter_status.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_status);
+    switch (des) {
+        .parameter_status => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
 }
