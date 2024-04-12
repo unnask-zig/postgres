@@ -61,6 +61,10 @@ const ReadyForQuery = struct {
     status: u8,
 };
 
+const RowDescription = struct {
+    storage: []const u8,
+};
+
 const BackendMessage = union(enum) {
     auth_ok,
     auth_cleartext_pass,
@@ -91,14 +95,10 @@ const BackendMessage = union(enum) {
     parse_complete,
     portal_suspended,
     ready_for_query: ReadyForQuery,
+    row_description: RowDescription,
     unsupported,
 };
 
-//readyForQuery
-//rowDescription
-
-//
-//
 //
 //authKerberosV5
 //authSCMCredential
@@ -252,6 +252,11 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             return BackendMessage{ .ready_for_query = .{
                 .status = message[5],
             } };
+        },
+        'T' => {
+            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
+            @memcpy(storage, message[5..msgLen]);
+            return BackendMessage{ .row_description = .{ .storage = storage } };
         },
         else => .unsupported,
     };
@@ -529,4 +534,17 @@ test "BackendMessage.ready_for_query good message" {
     };
 
     try std.testing.expectEqual(des, BackendMessage{ .ready_for_query = tmp });
+}
+
+test "BackendMessage.row_description good message" {
+    const msg = [_]u8{ 'T', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    defer std.testing.allocator.free(des.row_description.storage);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.row_description);
+    switch (des) {
+        .row_description => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
+        else => try std.testing.expect(1 == 2),
+    }
 }
