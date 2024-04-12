@@ -57,6 +57,10 @@ const ParameterStatus = struct {
     storage: []const u8,
 };
 
+const ReadyForQuery = struct {
+    status: u8,
+};
+
 const BackendMessage = union(enum) {
     auth_ok,
     auth_cleartext_pass,
@@ -85,10 +89,11 @@ const BackendMessage = union(enum) {
     parameter_description: ParameterDescription,
     parameter_status: ParameterStatus,
     parse_complete,
+    portal_suspended,
+    ready_for_query: ReadyForQuery,
     unsupported,
 };
 
-//portalSuspended
 //readyForQuery
 //rowDescription
 
@@ -242,6 +247,12 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             return BackendMessage{ .parameter_status = .{ .storage = storage } };
         },
         'p' => .parse_complete,
+        's' => .portal_suspended,
+        'Z' => {
+            return BackendMessage{ .ready_for_query = .{
+                .status = message[5],
+            } };
+        },
         else => .unsupported,
     };
 }
@@ -494,9 +505,28 @@ test "BackendMessage.parameter_status good message" {
 }
 
 test "BackendMessage.parse_complete good message" {
-    const msg = [_]u8{ 'p', 0, 0, 0, 8, 0, 0, 0, 0 };
+    const msg = [_]u8{ 'p', 0, 0, 0, 4 };
 
     const des = try deserialize(std.testing.allocator, &msg);
 
     try std.testing.expectEqual(des, BackendMessage.parse_complete);
+}
+
+test "BackendMessage.portal_suspended good message" {
+    const msg = [_]u8{ 's', 0, 0, 0, 4 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.portal_suspended);
+}
+
+test "BackendMessage.ready_for_query good message" {
+    const msg = [_]u8{ 'Z', 0, 0, 0, 5, 0 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    const tmp = ReadyForQuery{
+        .status = 0,
+    };
+
+    try std.testing.expectEqual(des, BackendMessage{ .ready_for_query = tmp });
 }
