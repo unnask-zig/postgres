@@ -84,10 +84,10 @@ const BackendMessage = union(enum) {
     notification_response: NotificationResponse,
     parameter_description: ParameterDescription,
     parameter_status: ParameterStatus,
+    parse_complete,
     unsupported,
 };
 
-//parseComplete
 //portalSuspended
 //readyForQuery
 //rowDescription
@@ -241,6 +241,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
             @memcpy(storage, message[5..msgLen]);
             return BackendMessage{ .parameter_status = .{ .storage = storage } };
         },
+        'p' => .parse_complete,
         else => .unsupported,
     };
 }
@@ -490,4 +491,12 @@ test "BackendMessage.parameter_status good message" {
         .parameter_status => |cc| try std.testing.expect(std.mem.eql(u8, cc.storage, "insert")),
         else => try std.testing.expect(1 == 2),
     }
+}
+
+test "BackendMessage.parse_complete good message" {
+    const msg = [_]u8{ 'p', 0, 0, 0, 8, 0, 0, 0, 0 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+
+    try std.testing.expectEqual(des, BackendMessage.parse_complete);
 }
