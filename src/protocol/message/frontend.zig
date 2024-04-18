@@ -6,6 +6,7 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Writer = @import("message_buffer.zig").MessageWriter;
 
 //bind(F) message.
 //in general, we're just going to tack everythings bytes together, but this
@@ -15,12 +16,13 @@ const Allocator = std.mem.Allocator;
 //This way, we can build additional functionality to minimize the total number of
 //syscalls occurring (for example, by copying the whole message out when the
 //message is built, then reusing the byte buffer and never resizing unless necessary)
-pub fn bind(portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {
+pub fn bind(writer: Writer, portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {
     _ = result_formats;
     _ = values;
     _ = formats;
     _ = stmt;
     _ = portal;
+    _ = writer;
 }
 
 //cancelRequest

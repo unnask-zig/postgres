@@ -1,3 +1,7 @@
+const std = @import("std");
+
+const MessageBuffer = @import("message/message_buffer.zig").MessageBuffer;
+
 //protocol has two phases:
 //startup & normal operation
 
