@@ -76,4 +76,32 @@ const MessageBuffer = struct {
             self.allocator.free(tmp);
         }
     }
+
+    fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
+        if (self.capacity >= needed_capacity) {
+            return;
+        }
+
+        //todo: look in to this growth. For general use structures like
+        // ArrayList, it is generally "bad" to only grow by what is needed.
+        // But for this which will be used for lightweight network messaging
+        // it might not matter, especially after the buffers warm up.
+        try self.ensureCapacity(needed_capacity);
+    }
+
+    pub fn appendByte(self: *Self, byte: u8) Allocator.Error!void {
+        const new_len = self.bytes.len + @sizeOf(byte);
+        self.checkCapacity(new_len);
+
+        self.bytes[self.bytes.len] = byte;
+        self.bytes.len += @sizeOf(byte);
+    }
+
+    pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
+        const new_len = self.bytes.len + bytes.len;
+        try self.checkCapacity(new_len);
+
+        const slice = self.allocatedSlice()[self.byte.len..];
+        @memcpy(slice[0..bytes.len], bytes);
+    }
 };
