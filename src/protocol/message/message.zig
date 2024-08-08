@@ -1,6 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
+//todo: I do wonder a little if making this a seekable writer would be "nicer"
+//to use
 const Message = struct {
     const Self = @This();
 
@@ -58,5 +60,27 @@ const Message = struct {
             self.capacity = new_capacity;
             self.allocator.free(tmp);
         }
+    }
+
+    pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
+        if (self.capacity >= needed_capacity) {
+            return;
+        }
+
+        //todo: is better growth properties needed?
+        try self.ensureCapacity(needed_capacity);
+    }
+
+    pub fn appendByte(self: *Self, byte: u8) Allocator.Error!void {
+        const new_len = self.bytes.len + @sizeOf(byte);
+        try self.checkCapacity(new_len);
+    }
+
+    pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
+        const new_len = self.bytes.len + bytes.len;
+        try self.checkCapacity(new_len);
+
+        const slice = self.allocatedSlice()[self.bytes.len..];
+        @memcpy(slice[0..bytes.len], bytes);
     }
 };
