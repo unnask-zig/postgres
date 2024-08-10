@@ -28,6 +28,12 @@ const Message = struct {
         return tmp;
     }
 
+    pub fn deinit(self: *Self) void {
+        self.allocator.free(self.allocatedSlice());
+        self.capacity = 0;
+        self.pos = 0;
+    }
+
     fn allocatedSlice(self: *Self) []u8 {
         return self.bytes.ptr[0..self.capacity];
     }
@@ -84,3 +90,12 @@ const Message = struct {
         @memcpy(slice[0..bytes.len], bytes);
     }
 };
+
+test "message.initCapacity" {
+    var msg: Message = try Message.initCapacity(std.testing.allocator, 50);
+
+    try std.testing.expect(msg.bytes.len == 0);
+    try std.testing.expect(msg.capacity == 50);
+
+    msg.deinit();
+}
