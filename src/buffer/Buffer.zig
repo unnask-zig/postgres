@@ -57,9 +57,6 @@ pub fn seekTo(self: *Self, pos: usize) BufferError!void {
     self.pos = pos;
 }
 
-//todo rewrite to use position and len for writing.
-//
-//
 pub fn ensureCapacity(self: *Self, new_capacity: usize) Allocator.Error!void {
     if (self.capacity >= new_capacity) {
         return;
@@ -100,29 +97,44 @@ pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
 }
 
 pub fn writeByte(self: *Self, byte: u8) Allocator.Error!void {
-    const new_len = self.bytes.len + @sizeOf(byte);
-    try self.checkCapacity(new_len);
+    const end = self.pos + @sizeOf(byte);
+    try self.checkCapacity(end);
+    self.pos = end;
 }
 
 pub fn writeAll(self: *Self, bytes: []const u8) Allocator.Error!void {
-    const new_len = self.bytes.len + bytes.len;
-    try self.checkCapacity(new_len);
+    const end = self.pos + bytes.len;
+    try self.checkCapacity(end);
 
-    const slice = self.allocatedSlice()[self.bytes.len..];
+    const slice = self.allocatedSlice()[self.pos..][0..bytes.len];
     @memcpy(slice[0..bytes.len], bytes);
+    self.pos = end;
 }
 
 pub fn writeInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
     const count = @divExact(@typeInfo(T).Int.bits, 8);
-    try self.checkCapacity(self.pos + count);
+    const end = self.pos + count;
+    try self.checkCapacity(end);
 
     std.mem.writeInt(T, &self.bytes[self.pos..][0..count], value, endian);
+    self.pos = end;
 }
 
-test "message.initCapacity" {
+test "Buffer.init" {
+    var msg = Self.init(std.testing.allocator);
+
+    try std.testing.expect(msg.bytes.len == 0);
+    try std.testing.expect(msg.pos == 0);
+    try std.testing.expect(msg.capacity == 0);
+
+    msg.deinit();
+}
+
+test "Buffer.initCapacity" {
     var msg: Self = try Self.initCapacity(std.testing.allocator, 50);
 
     try std.testing.expect(msg.bytes.len == 0);
+    try std.testing.expect(msg.pos == 0);
     try std.testing.expect(msg.capacity == 50);
 
     msg.deinit();
