@@ -99,17 +99,24 @@ pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
     try self.ensureCapacity(needed_capacity);
 }
 
-pub fn appendByte(self: *Self, byte: u8) Allocator.Error!void {
+pub fn writeByte(self: *Self, byte: u8) Allocator.Error!void {
     const new_len = self.bytes.len + @sizeOf(byte);
     try self.checkCapacity(new_len);
 }
 
-pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
+pub fn writeAll(self: *Self, bytes: []const u8) Allocator.Error!void {
     const new_len = self.bytes.len + bytes.len;
     try self.checkCapacity(new_len);
 
     const slice = self.allocatedSlice()[self.bytes.len..];
     @memcpy(slice[0..bytes.len], bytes);
+}
+
+pub fn writeInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
+    const count = @divExact(@typeInfo(T).Int.bits, 8);
+    try self.checkCapacity(self.pos + count);
+
+    std.mem.writeInt(T, &self.bytes[self.pos..][0..count], value, endian);
 }
 
 test "message.initCapacity" {
