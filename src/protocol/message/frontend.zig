@@ -6,7 +6,23 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Writer = @import("message_buffer.zig").MessageBufferWriter;
+
+const Writer = std.ArrayList(u8).Writer;
+
+fn writeSize(writer: Writer) void {
+    //const count = @divExact(@typeInfo(T).Int.bits, 8);
+    //const end = self.pos + count;
+    //try self.checkCapacity(end);
+
+    //todo: Note that postgres messages can only be i32 big.
+    //maybe ArrayList isn't the approach to take
+    //const size: i32 = @intCast(writer.context.items.len);
+    _ = writer;
+
+    //std.mem.writeInt(T, &self.bytes[self.pos..][0..count], value, endian);
+    //self.pos = end;
+    //writer.context.items[1..5];
+}
 
 //bind(F) message.
 //in general, we're just going to tack everythings bytes together, but this
