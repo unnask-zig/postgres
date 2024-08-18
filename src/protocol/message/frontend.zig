@@ -7,21 +7,18 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-const Writer = std.ArrayList(u8).Writer;
+const Buffer = std.ArrayList(u8);
 
-fn writeSize(writer: Writer) void {
+inline fn writeSize(buffer: *Buffer, pos: usize) void {
     //const count = @divExact(@typeInfo(T).Int.bits, 8);
     //const end = self.pos + count;
     //try self.checkCapacity(end);
 
     //todo: Note that postgres messages can only be i32 big.
     //maybe ArrayList isn't the approach to take
-    //const size: i32 = @intCast(writer.context.items.len);
-    _ = writer;
+    const size: i32 = @intCast(buffer.items.len);
 
-    //std.mem.writeInt(T, &self.bytes[self.pos..][0..count], value, endian);
-    //self.pos = end;
-    //writer.context.items[1..5];
+    std.mem.writeInt(i32, &buffer.items[pos..][0..4], size, std.builtin.Endian.big);
 }
 
 //bind(F) message.
@@ -32,13 +29,13 @@ fn writeSize(writer: Writer) void {
 //This way, we can build additional functionality to minimize the total number of
 //syscalls occurring (for example, by copying the whole message out when the
 //message is built, then reusing the byte buffer and never resizing unless necessary)
-pub fn bind(writer: Writer, portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {
+pub fn bind(buffer: Buffer, portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {
     _ = result_formats;
     _ = values;
     _ = formats;
     _ = stmt;
     _ = portal;
-    _ = writer;
+    _ = buffer;
 }
 
 //cancelRequest
@@ -60,13 +57,16 @@ pub fn bind(writer: Writer, portal: u8, stmt: []u8, formats: []i16, values: []u8
 //sslRequest
 
 //startupMessage
-pub fn startupMessage(writer: Writer, user: []const u8, database: ?[]const u8, options: ?[]const u8, replication: ?[]const u8) !void {
+pub fn startupMessage(buffer: Buffer, user: []const u8, database: ?[]const u8, options: ?[]const u8, replication: ?[]const u8) !void {
     const version: i32 = 196608;
 
     //I went with an ArrayList type before considering that I'd need to write
     //to a specific spot in the list. Looks like ArrayList + its writer
     //is not going to handle that all that well as it is not seekable.
     //annoying!
+
+    var writer = buffer.writer();
+
     try writer.writeInt(i32, 0, std.builtin.Endian.big);
     try writer.writeInt(i32, version, std.builtin.Endian.big);
     try writer.write("user");
@@ -93,6 +93,7 @@ pub fn startupMessage(writer: Writer, user: []const u8, database: ?[]const u8, o
     }
 
     try writer.writeByte(0);
+    writeSize(buffer, 0);
 }
 
 //sync
