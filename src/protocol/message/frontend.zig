@@ -21,6 +21,11 @@ inline fn writeSize(buffer: *Buffer, pos: usize) void {
     std.mem.writeInt(i32, &buffer.items[pos..][0..4], size, std.builtin.Endian.big);
 }
 
+inline fn writeStr(writer: Buffer.Writer, str: []u8) !void {
+    try writer.writeAll(str);
+    try writer.writeByte(0);
+}
+
 //bind(F) message.
 //in general, we're just going to tack everythings bytes together, but this
 //is annoying still.
@@ -29,13 +34,38 @@ inline fn writeSize(buffer: *Buffer, pos: usize) void {
 //This way, we can build additional functionality to minimize the total number of
 //syscalls occurring (for example, by copying the whole message out when the
 //message is built, then reusing the byte buffer and never resizing unless necessary)
-pub fn bind(buffer: Buffer, portal: u8, stmt: []u8, formats: []i16, values: []u8, result_formats: []i16) void {
-    _ = result_formats;
-    _ = values;
-    _ = formats;
-    _ = stmt;
-    _ = portal;
-    _ = buffer;
+pub fn bind(buffer: Buffer, portal: u8, stmt: []u8, formats: []i16, values: [][]u8, result_formats: []i16) !void {
+    buffer.resize(0);
+
+    var writer = buffer.writer();
+    try writer.writeByte('B');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+
+    try writeStr(portal);
+    try writeStr(stmt);
+
+    const formatLen: i16 = @intCast(formats.len);
+    writer.writeInt(i16, formatLen, std.builtin.Endian.big);
+
+    for (formats) |format| {
+        writer.writeInt(i16, format, std.builtin.Endian.big);
+    }
+
+    const valuesLen: i16 = @intCast(values.len);
+    writer.writeInt(i16, valuesLen, std.builtin.Endian.big);
+
+    for (values) |value| {
+        const valueLen: i32 = @intCast(value.len);
+        writer.writeInt(i32, valueLen, std.builtin.Endian.big);
+        writer.writeAll(value);
+    }
+
+    const resultLen: i16 = @intCast(result_formats.len);
+    writer.writeInt(i16, resultLen, std.builtin.Endian.big);
+
+    for (result_formats) |resultFormat| {
+        writer.writeInt(i16, resultFormat, std.builtin.Endian.big);
+    }
 }
 
 //cancelRequest
@@ -60,35 +90,31 @@ pub fn bind(buffer: Buffer, portal: u8, stmt: []u8, formats: []i16, values: []u8
 pub fn startupMessage(buffer: Buffer, user: []const u8, database: ?[]const u8, options: ?[]const u8, replication: ?[]const u8) !void {
     const version: i32 = 196608;
 
-    //I went with an ArrayList type before considering that I'd need to write
-    //to a specific spot in the list. Looks like ArrayList + its writer
-    //is not going to handle that all that well as it is not seekable.
-    //annoying!
-
+    buffer.resize(0);
     var writer = buffer.writer();
 
     try writer.writeInt(i32, 0, std.builtin.Endian.big);
     try writer.writeInt(i32, version, std.builtin.Endian.big);
-    try writer.write("user");
+    try writer.writeAll("user");
     try writer.writeByte(0);
-    try writer.write(user);
+    try writer.writeAll(user);
     try writer.writeByte(0);
     if (database) |db| {
-        try writer.write("user");
+        try writer.writeAll("user");
         try writer.writeByte(0);
-        try writer.write(db);
+        try writer.writeAll(db);
         try writer.writeByte(0);
     }
     if (options) |opts| {
-        try writer.write("options");
+        try writer.writeAll("options");
         try writer.writeByte(0);
-        try writer.write(opts);
+        try writer.writeAll(opts);
         try writer.writeByte(0);
     }
     if (replication) |rep| {
-        try writer.write("repication");
+        try writer.writeAll("repication");
         try writer.writeByte(0);
-        try writer.write(rep);
+        try writer.writeAll(rep);
         try writer.writeByte(0);
     }
 
