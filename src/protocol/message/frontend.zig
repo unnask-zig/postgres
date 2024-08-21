@@ -27,13 +27,6 @@ inline fn writeStr(writer: Buffer.Writer, str: []u8) !void {
 }
 
 //bind(F) message.
-//in general, we're just going to tack everythings bytes together, but this
-//is annoying still.
-//Allocs are "expensive", so we want those minimized.
-//Probably best to build another struct that'll be used to build the message up.
-//This way, we can build additional functionality to minimize the total number of
-//syscalls occurring (for example, by copying the whole message out when the
-//message is built, then reusing the byte buffer and never resizing unless necessary)
 pub fn bind(buffer: Buffer, portal: u8, stmt: []u8, formats: []i16, values: [][]u8, result_formats: []i16) !void {
     buffer.resize(0);
 
@@ -44,27 +37,20 @@ pub fn bind(buffer: Buffer, portal: u8, stmt: []u8, formats: []i16, values: [][]
     try writeStr(portal);
     try writeStr(stmt);
 
-    const formatLen: i16 = @intCast(formats.len);
-    writer.writeInt(i16, formatLen, std.builtin.Endian.big);
-
+    writer.writeInt(i16, @intCast(formats.len), std.builtin.Endian.big);
     for (formats) |format| {
         writer.writeInt(i16, format, std.builtin.Endian.big);
     }
 
-    const valuesLen: i16 = @intCast(values.len);
-    writer.writeInt(i16, valuesLen, std.builtin.Endian.big);
-
+    writer.writeInt(i16, @intCast(values.len), std.builtin.Endian.big);
     for (values) |value| {
-        const valueLen: i32 = @intCast(value.len);
-        writer.writeInt(i32, valueLen, std.builtin.Endian.big);
+        writer.writeInt(i32, @intCast(value.len), std.builtin.Endian.big);
         writer.writeAll(value);
     }
 
-    const resultLen: i16 = @intCast(result_formats.len);
-    writer.writeInt(i16, resultLen, std.builtin.Endian.big);
-
-    for (result_formats) |resultFormat| {
-        writer.writeInt(i16, resultFormat, std.builtin.Endian.big);
+    writer.writeInt(i16, @intCast(result_formats.len), std.builtin.Endian.big);
+    for (result_formats) |result_format| {
+        writer.writeInt(i16, result_format, std.builtin.Endian.big);
     }
 }
 
