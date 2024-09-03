@@ -175,6 +175,13 @@ pub fn functionCall(buffer: *Buffer, object_id: i32, formats: []const Formats, v
 }
 
 //gssencRequest
+pub fn gssEncryptionRequest(buffer: *Buffer) !void {
+    const gssenc_code: i32 = 80877104;
+
+    var writer = buffer.writer();
+    try writer.writeInt(i32, 8, std.builtin.Endian.big);
+    try writer.writeInt(i32, gssenc_code, std.builtin.Endian.big);
+}
 
 //gssResponse
 
