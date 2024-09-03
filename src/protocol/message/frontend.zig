@@ -9,6 +9,11 @@ const Allocator = std.mem.Allocator;
 
 const Buffer = std.ArrayList(u8);
 
+const Formats = enum(i16) {
+    text = 0,
+    binary = 1,
+};
+
 inline fn writeSize(buffer: *Buffer, pos: usize) void {
     //const count = @divExact(@typeInfo(T).Int.bits, 8);
     //const end = self.pos + count;
@@ -27,7 +32,7 @@ inline fn writeStr(writer: *Buffer.Writer, str: []u8) !void {
 }
 
 //bind(F) message.
-pub fn bind(buffer: *Buffer, portal: [:0]const u8, stmt: [:0]const u8, formats: []const i16, values: []const []const u8, result_formats: []i16) !void {
+pub fn bind(buffer: *Buffer, portal: [:0]const u8, stmt: [:0]const u8, formats: []const Formats, values: []const []const u8, result_formats: []const Formats) !void {
     var writer = buffer.writer();
     try writer.writeByte('B');
     try writer.writeInt(i32, 0, std.builtin.Endian.big);
@@ -145,6 +150,29 @@ pub fn flush(buffer: *Buffer) !void {
 }
 
 //functionCall
+pub fn functionCall(buffer: *Buffer, object_id: i32, formats: []const Formats, values: []const []const u8, result_format: Formats) !void {
+    var writer = buffer.writer();
+    try writer.writeByte('F');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+
+    try writer.writeInt(i32, object_id, std.builtin.Endian.big);
+
+    try writer.writeInt(i16, @intCast(formats.len), std.builtin.Endian.big);
+    for (formats) |format| {
+        try writer.writeInt(i16, format, std.builtin.Endian.big);
+    }
+
+    try writer.writeInt(i16, @intCast(values.len), std.builtin.Endian.big);
+    for (values) |value| {
+        //todo: bug here for "NULL"
+        //      a length of -1 represents NULL
+        try writer.writeInt(i32, @intCast(value.len), std.builtin.Endian.big);
+        try writer.writeAll(value);
+    }
+
+    try writer.writeInt(i16, result_format, std.builtin.Endian.big);
+    writeSize(buffer, 1);
+}
 
 //gssencRequest
 
