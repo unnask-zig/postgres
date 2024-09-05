@@ -184,8 +184,32 @@ pub fn gssEncryptionRequest(buffer: *Buffer) !void {
 }
 
 //gssResponse
+pub fn gssResponse(buffer: *Buffer, message_data: []const u8) !void {
+    var writer = buffer.writer();
+
+    try writer.writeByte('p');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+    try writer.writeAll(message_data);
+
+    writeSize(buffer, 1);
+}
 
 //parse
+pub fn parse(buffer: *Buffer, destination: [:0]const u8, query: [:0]const u8, object_ids: []const i32) !void {
+    var writer = buffer.writer();
+
+    try writer.writeByte('P');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+    try writer.writeAll(destination);
+    try writer.writeAll(query);
+    try writer.writeInt(i16, @intCast(object_ids.len), std.builtin.Endian.big);
+
+    for (object_ids) |object_id| {
+        try writer.writeInt(i32, object_id, std.builtin.Endian.big);
+    }
+
+    writeSize(buffer, 1);
+}
 
 //passwordMessage
 
