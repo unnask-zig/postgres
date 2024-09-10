@@ -195,13 +195,13 @@ pub fn gssResponse(buffer: *Buffer, message_data: []const u8) !void {
 }
 
 //parse
-pub fn parse(buffer: *Buffer, destination: [:0]const u8, query: [:0]const u8, object_ids: []const i32) !void {
+pub fn parse(buffer: *Buffer, destination: [:0]const u8, query_str: [:0]const u8, object_ids: []const i32) !void {
     var writer = buffer.writer();
 
     try writer.writeByte('P');
     try writer.writeInt(i32, 0, std.builtin.Endian.big);
     try writer.writeAll(destination);
-    try writer.writeAll(query);
+    try writer.writeAll(query_str);
     try writer.writeInt(i16, @intCast(object_ids.len), std.builtin.Endian.big);
 
     for (object_ids) |object_id| {
@@ -212,10 +212,44 @@ pub fn parse(buffer: *Buffer, destination: [:0]const u8, query: [:0]const u8, ob
 }
 
 //passwordMessage
+pub fn password(buffer: *Buffer, passwd: [:0]const u8) !void {
+    var writer = buffer.writer();
+
+    try writer.writeByte('p');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+    try writer.writeAll(passwd);
+
+    writeSize(buffer, 1);
+}
 
 //query
+pub fn query(buffer: *Buffer, query_str: [:0]const u8) !void {
+    var writer = buffer.writer();
+
+    try writer.writeByte('Q');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+    try writer.writeAll(query_str);
+
+    writeSize(buffer, 1);
+}
 
 //saslInitialResponse
+pub fn saslInitialResponse(buffer: *Buffer, name: [:0]const u8, response: ?[]const u8) !void {
+    var writer = buffer.writer();
+
+    try writer.writeByte('p');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+    try writer.writeAll(name);
+
+    if (response) |resp| {
+        try writer.writeInt(i32, resp.len, std.builtin.Endian.big);
+        try writer.writeAll(resp);
+    } else {
+        try writer.writeInt(i32, -1, std.builtin.Endian.big);
+    }
+
+    writeSize(buffer, 1);
+}
 
 //saslResponse
 
