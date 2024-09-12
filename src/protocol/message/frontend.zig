@@ -252,8 +252,24 @@ pub fn saslInitialResponse(buffer: *Buffer, name: [:0]const u8, response: ?[]con
 }
 
 //saslResponse
+pub fn saslResponse(buffer: *Buffer, data: []const u8) !void {
+    var writer = buffer.writer();
+
+    try writer.writeByte('p');
+    try writer.writeInt(i32, 0, std.builtin.Endian.big);
+    try writer.writeAll(data);
+
+    writeSize(buffer, 1);
+}
 
 //sslRequest
+pub fn sslRequest(buffer: *Buffer) !void {
+    var writer = buffer.writer();
+    const request_code: i32 = 80877103;
+
+    try writer.writeInt(i32, 8, std.builtin.Endian.big);
+    try writer.writeInt(i32, request_code, std.builtin.Endian.big);
+}
 
 //startupMessage
 pub fn startupMessage(buffer: *Buffer, user: [:0]const u8, database: ?[:0]const u8, options: ?[:0]const u8, replication: ?[:0]const u8) !void {
@@ -284,12 +300,25 @@ pub fn startupMessage(buffer: *Buffer, user: [:0]const u8, database: ?[:0]const 
         try writer.writeAll(rep);
     }
 
-    try writer.writeByte(0);
+    //try writer.writeByte(0);
     writeSize(buffer, 0);
 }
 
 //sync
+pub fn sync(buffer: *Buffer) !void {
+    var writer = buffer.writer();
+
+    writer.writeByte('S');
+    writer.writeInt(i32, 4, std.builtin.Endian.big);
+}
+
 //terminate
+pub fn terminate(buffer: *Buffer) !void {
+    var writer = buffer.writer();
+
+    writer.writeByte('X');
+    writer.writeInt(i32, 4, std.builtin.Endian.big);
+}
 
 const MessageBuffer = @import("message_buffer.zig").MessageBuffer;
 test "startupMessage only user" {
@@ -297,7 +326,7 @@ test "startupMessage only user" {
 
     const msg = startupMessage(buf.writer, "test", null, null, null, null);
 
-    const compare = []u8{ 0, 0, 0, 19, 0, 0, 3, 0, 'u', 's', 'e', 'r', 0, 't', 'e', 's', 't', 0, 0 };
+    const compare = []u8{ 0, 0, 0, 19, 0, 0, 3, 0, 'u', 's', 'e', 'r', 0, 't', 'e', 's', 't', 0 };
 
     _ = msg;
     _ = compare;
