@@ -22,8 +22,9 @@ inline fn writeSize(buffer: *Buffer, pos: usize) void {
     //todo: Note that postgres messages can only be i32 big.
     //maybe ArrayList isn't the approach to take
     const size: i32 = @intCast(buffer.items.len);
+    const cpos: i32 = @intCast(pos);
 
-    std.mem.writeInt(i32, &buffer.items[pos..][0..4], size - pos, std.builtin.Endian.big);
+    std.mem.writeInt(i32, buffer.items[pos..][0..4], size - cpos, std.builtin.Endian.big);
 }
 
 inline fn writeStr(writer: *Buffer.Writer, str: []u8) !void {
@@ -275,7 +276,7 @@ pub fn sslRequest(buffer: *Buffer) !void {
 pub fn startupMessage(buffer: *Buffer, user: [:0]const u8, database: ?[:0]const u8, options: ?[:0]const u8, replication: ?[:0]const u8) !void {
     const version: i32 = 196608;
 
-    buffer.resize(0);
+    try buffer.resize(0);
     var writer = buffer.writer();
 
     const user_text: [:0]const u8 = "user";
@@ -320,13 +321,13 @@ pub fn terminate(buffer: *Buffer) !void {
     writer.writeInt(i32, 4, std.builtin.Endian.big);
 }
 
-const MessageBuffer = @import("message_buffer.zig").MessageBuffer;
 test "startupMessage only user" {
-    const buf = MessageBuffer.init(std.testing.allocator);
+    var buf = Buffer.init(std.testing.allocator);
+    defer buf.deinit();
 
-    const msg = startupMessage(buf.writer, "test", null, null, null, null);
+    const msg = try startupMessage(&buf, "test", null, null, null);
 
-    const compare = []u8{ 0, 0, 0, 19, 0, 0, 3, 0, 'u', 's', 'e', 'r', 0, 't', 'e', 's', 't', 0 };
+    const compare = [_]u8{ 0, 0, 0, 19, 0, 0, 3, 0, 'u', 's', 'e', 'r', 0, 't', 'e', 's', 't', 0 };
 
     _ = msg;
     _ = compare;
