@@ -14,3 +14,9 @@ pub fn init(self: BufferPool, allocator: Allocator) void {
     self.used = allocator.Create(Queue);
     self.free = allocator.Create(Queue);
 }
+
+//pub fn acquireBuffer() --do what needs be done to move a buffer from unused to used
+//pub fn findBuffer() --find a buffer base on some properties
+//pub fn getBuffer() --just grab a buffer off the top of the pool
+//pub fn addUsed() -- add a new buffer to the used list
+//pub fn release() --release a used buffer back to the free pool
