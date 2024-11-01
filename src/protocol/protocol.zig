@@ -1,6 +1,13 @@
 const std = @import("std");
+const Connection = std.http.Client.Connection;
 
-const MessageBuffer = @import("message/message_buffer.zig").MessageBuffer;
+const fep = @import("message/frontend.zig");
+
+pub fn startup(connection: Connection,buffer: *Buffer, portal: [:0]const u8, stmt: [:0]const u8, formats: []const Formats, values: []const []const u8, result_formats: []const Formats) void {
+    
+    const smsg = fep.startupMessage(buffer, user, database, options, replication);
+    _ = smsg;
+}
 
 //protocol has two phases:
 //startup & normal operation

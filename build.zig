@@ -16,7 +16,6 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(lib);
 
     const main_tests = b.addTest(.{
-        //        .root_source_file = .{ .path = "src/tests.zig" },
         .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .optimize = optimize,
