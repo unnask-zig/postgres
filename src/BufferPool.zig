@@ -22,10 +22,15 @@ pub fn addUsed(self: *BufferPool, buffer: *Buffer) void {
 //pub fn acquireBuffer() --do what needs be done to move a buffer from unused to used
 
 pub fn acquireBuffer(self: *BufferPool) !Buffer {
-    _ = self;
+    const tmp = self.free.popFirst();
+    self.addUsed(tmp);
+    return tmp;
 }
+
+// going to need to be more to the Buffers than just being an ArrayList
+// so we can locate the buffer at release time.
+//pub fn release() --release a used buffer back to the free pool
 
 //pub fn findBuffer() --find a buffer base on some properties
 //pub fn getBuffer() --just grab a buffer off the top of the pool
 //pub fn addUsed() -- add a new buffer to the used list
-//pub fn release() --release a used buffer back to the free pool
