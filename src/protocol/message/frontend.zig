@@ -6,8 +6,9 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Buffer = @import("../../Buffer.zig").Buffer;
 
-const Buffer = std.ArrayList(u8);
+//const Buffer = std.ArrayList(u8);
 
 const Formats = enum(i16) {
     text = 0,
