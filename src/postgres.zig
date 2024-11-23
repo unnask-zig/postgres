@@ -49,4 +49,8 @@ test "Parse Connection String" {
     const info = ConnectionInfo.initFromConnStr("host=127.0.0.1;port=1234;user=test;password=test;database=testdatabase");
 
     try std.testing.expectEqualStrings("127.0.0.1", info.host.?);
+    try std.testing.expectEqualStrings("1234", info.port.?);
+    try std.testing.expectEqualStrings("test", info.user.?);
+    try std.testing.expectEqualStrings("test", info.password.?);
+    try std.testing.expectEqualStrings("testdatabase", info.database.?);
 }
