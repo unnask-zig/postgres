@@ -1,12 +1,19 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 const Connection = std.http.Client.Connection;
 
-const fep = @import("message/frontend.zig");
+const fe = @import("message/frontend.zig");
 
-pub fn startup(connection: Connection,buffer: *Buffer, portal: [:0]const u8, stmt: [:0]const u8, formats: []const Formats, values: []const []const u8, result_formats: []const Formats) void {
-    
-    const smsg = fep.startupMessage(buffer, user, database, options, replication);
-    _ = smsg;
+const Buffer = @import("../Buffer.zig").Buffer;
+
+pub fn startup(allocator: Allocator, stream: std.net.Stream, user: []const u8, password: ?[]const u8, database: ?[]const u8) !void {
+    var buffer = try Buffer.initCapacity(allocator, 1024);
+
+    const msg = try fe.startupMessage(&buffer, user, database, null, null);
+    _ = msg;
+
+    _ = password;
+    _ = stream;
 }
 
 //protocol has two phases:

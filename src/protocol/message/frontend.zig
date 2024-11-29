@@ -274,7 +274,7 @@ pub fn sslRequest(buffer: *Buffer) !void {
 }
 
 //startupMessage
-pub fn startupMessage(buffer: *Buffer, user: [:0]const u8, database: ?[:0]const u8, options: ?[:0]const u8, replication: ?[:0]const u8) !void {
+pub fn startupMessage(buffer: *Buffer, user: []const u8, database: ?[]const u8, options: ?[]const u8, replication: ?[]const u8) !void {
     const version: i32 = 196608;
 
     try buffer.resize(0);
@@ -289,17 +289,21 @@ pub fn startupMessage(buffer: *Buffer, user: [:0]const u8, database: ?[:0]const 
     try writer.writeInt(i32, version, std.builtin.Endian.big);
     try writer.writeAll(user_text);
     try writer.writeAll(user);
+    try writer.writeByte(0);
     if (database) |db| {
         try writer.writeAll(database_text);
         try writer.writeAll(db);
+        try writer.writeByte(0);
     }
     if (options) |opts| {
         try writer.writeAll(options_text);
         try writer.writeAll(opts);
+        try writer.writeByte(0);
     }
     if (replication) |rep| {
         try writer.writeAll(replication_text);
         try writer.writeAll(rep);
+        try writer.writeByte(0);
     }
 
     //try writer.writeByte(0);
