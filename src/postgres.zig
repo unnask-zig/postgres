@@ -88,7 +88,7 @@ const Postgres = struct {
 test "Play" {
     var pg = Postgres.init(std.testing.allocator, .{
         .address = .{
-            .host = "localhost",
+            .host = "test",
             .port = 5432,
         },
         .user = "test",

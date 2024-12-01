@@ -280,33 +280,32 @@ pub fn startupMessage(buffer: *Buffer, user: []const u8, database: ?[]const u8, 
     try buffer.resize(0);
     var writer = buffer.writer();
 
-    const user_text: [:0]const u8 = "user";
-    const database_text: [:0]const u8 = "database";
-    const options_text: [:0]const u8 = "options";
-    const replication_text: [:0]const u8 = "replication";
-
     try writer.writeInt(i32, 0, std.builtin.Endian.big);
     try writer.writeInt(i32, version, std.builtin.Endian.big);
-    try writer.writeAll(user_text);
+    try writer.writeAll("user");
+    try writer.writeByte(0);
     try writer.writeAll(user);
     try writer.writeByte(0);
     if (database) |db| {
-        try writer.writeAll(database_text);
+        try writer.writeAll("database");
+        try writer.writeByte(0);
         try writer.writeAll(db);
         try writer.writeByte(0);
     }
     if (options) |opts| {
-        try writer.writeAll(options_text);
+        try writer.writeAll("options");
+        try writer.writeByte(0);
         try writer.writeAll(opts);
         try writer.writeByte(0);
     }
     if (replication) |rep| {
-        try writer.writeAll(replication_text);
+        try writer.writeAll("replication");
+        try writer.writeByte(0);
         try writer.writeAll(rep);
         try writer.writeByte(0);
     }
 
-    //try writer.writeByte(0);
+    try writer.writeByte(0);
     writeSize(buffer, 0);
 }
 

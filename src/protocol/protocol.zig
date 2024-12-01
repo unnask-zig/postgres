@@ -8,14 +8,17 @@ const Buffer = @import("../Buffer.zig").Buffer;
 
 pub fn startup(allocator: Allocator, stream: std.net.Stream, user: []const u8, password: ?[]const u8, database: ?[]const u8) !void {
     var buffer = try Buffer.initCapacity(allocator, 1024);
+    defer buffer.deinit();
 
     // Alternative is to use Allocator.dupeZ earlier to store everything as zero terminated, then have
     // startup message accept a zero terminated string. Arguments to be made either way.
-    const msg = try fe.startupMessage(&buffer, user, database, null, null);
-    _ = msg;
+    try fe.startupMessage(&buffer, user, database, null, null);
 
+    _ = try stream.write(buffer.items);
+
+    var rbuff: [1024]u8 = undefined;
+    _ = try stream.read(&rbuff);
     _ = password;
-    _ = stream;
 }
 
 //protocol has two phases:
