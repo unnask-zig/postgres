@@ -20,9 +20,26 @@ pub fn startup(allocator: Allocator, stream: std.net.Stream, user: []const u8, p
     var rbuff: [1024]u8 = undefined;
     _ = try stream.read(&rbuff);
 
-    const response = be.deserialize(allocator, rbuff);
+    const response = try be.deserialize(allocator, &rbuff);
 
-    _ = response;
+    switch (response) {
+        .auth_ok => {
+            std.debug.print("Auth OL\n", .{});
+        },
+        .auth_cleartext_pass => {
+            std.debug.print("Auth Cleartext Pass\n", .{});
+        },
+        .auth_md5_pass => {
+            std.debug.print("Auth md5_pass\n", .{});
+        },
+        .auth_sasl => |mechanism| {
+            _ = mechanism;
+            std.debug.print("Auth SASL\n", .{});
+        },
+        else => {
+            std.debug.print("Unsupport response\n", .{});
+        },
+    }
 
     _ = password;
 }

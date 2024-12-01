@@ -8,6 +8,16 @@ const AuthMD5Password = struct {
     salt: [4]u8 = undefined,
 };
 
+const SASLMechanism = enum {
+    scram_sha_256,
+    scram_sha_256_plus,
+    unsupported,
+};
+
+const AuthSASL = struct {
+    mechanism: SASLMechanism = .unsupported,
+};
+
 const KeyData = struct {
     process: i32,
     secret: i32,
@@ -70,9 +80,13 @@ const BackendMessage = union(enum) {
     auth_cleartext_pass,
     //authKerberosV5,
     auth_md5_pass: AuthMD5Password,
-    //authSCMCred,
-    //authGSS,
-    //authGSSContinue,
+    //authSCMCredential
+    //authGSS
+    //authGSSContinue
+    //authSSPI
+    auth_sasl: AuthSASL,
+    //authSASLContinue
+    //authSASLFinal
     key_data: KeyData,
     bind_complete,
     close_complete,
@@ -108,7 +122,7 @@ const BackendMessage = union(enum) {
 //authSASL
 //authSASLContinue
 //authSASLFinal
-inline fn deserializeAuth(message: []const u8) BackendMessage {
+inline fn deserializeAuth(message: []const u8, len: usize) BackendMessage {
     // The spec details that this is actually an int32, however, the max
     // value is 12, so no need to do this extra work for the moment.
     const msgType = message[8];
@@ -125,7 +139,19 @@ inline fn deserializeAuth(message: []const u8) BackendMessage {
         7 => .unsupported, //authGSS
         8 => .unsupported, //authGSSContinue
         9 => .unsupported, //authSSPI
-        10 => .unsupported, //authSASL
+        10 => {
+
+            //todo: len is coming as 12 when it should be 22. WTF ????
+
+            var tmp = AuthSASL{};
+            if (std.mem.eql(u8, message[9 .. len - 1], "scram-sha-256")) {
+                tmp.mechanism = .scram_sha_256;
+            } else {
+                tmp.mechanism = .scram_sha_256_plus;
+            }
+
+            return BackendMessage{ .auth_sasl = tmp };
+        },
         11 => .unsupported, //authSASLContinue
         12 => .unsupported, //authSASLFinal
         else => .unsupported,
@@ -171,7 +197,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
     }
 
     return switch (message[0]) {
-        'R' => return deserializeAuth(message),
+        'R' => return deserializeAuth(message, msgLen),
         'K' => {
             return BackendMessage{ .key_data = .{
                 .process = bigToType(i32, message[5..9]),
@@ -286,6 +312,16 @@ test "BackendMessage.auth_md5_pass good message" {
     tmp.salt = [4]u8{ 1, 2, 3, 4 };
 
     try std.testing.expectEqual(des, BackendMessage{ .auth_md5_pass = tmp });
+}
+
+test "BackendMessage.auth_sasl good message" {
+    const msg = [_]u8{ 'R', 0, 0, 0, 12, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0 };
+
+    const des = try deserialize(std.testing.allocator, &msg);
+    var tmp = AuthSASL{};
+    tmp.mechanism = .scram_sha_256;
+
+    try std.testing.expectEqual(des, BackendMessage{ .auth_sasl = tmp });
 }
 
 test "BackendMessage.key_data good message" {
