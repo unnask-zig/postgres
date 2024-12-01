@@ -91,7 +91,7 @@ test "Play" {
             .host = "test",
             .port = 5432,
         },
-        .user = "test",
+        .user = "postgres",
         .password = "test",
         .database = "test",
     });

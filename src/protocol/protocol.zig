@@ -3,6 +3,7 @@ const Allocator = std.mem.Allocator;
 const Connection = std.http.Client.Connection;
 
 const fe = @import("message/frontend.zig");
+const be = @import("message/backend.zig");
 
 const Buffer = @import("../Buffer.zig").Buffer;
 
@@ -18,6 +19,11 @@ pub fn startup(allocator: Allocator, stream: std.net.Stream, user: []const u8, p
 
     var rbuff: [1024]u8 = undefined;
     _ = try stream.read(&rbuff);
+
+    const response = be.deserialize(allocator, rbuff);
+
+    _ = response;
+
     _ = password;
 }
 
