@@ -315,7 +315,7 @@ test "BackendMessage.auth_md5_pass good message" {
 }
 
 test "BackendMessage.auth_sasl good message" {
-    const msg = [_]u8{ 'R', 0, 0, 0, 12, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0 };
+    const msg = [_]u8{ 'R', 0, 0, 0, 22, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0 };
 
     const des = try deserialize(std.testing.allocator, &msg);
     var tmp = AuthSASL{};
