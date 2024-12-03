@@ -140,17 +140,14 @@ inline fn deserializeAuth(message: []const u8, len: usize) BackendMessage {
         8 => .unsupported, //authGSSContinue
         9 => .unsupported, //authSSPI
         10 => {
-
-            //todo: len is coming as 12 when it should be 22. WTF ????
-
             var tmp = AuthSASL{};
-            if (std.mem.eql(u8, message[9 .. len - 1], "scram-sha-256")) {
+            if (std.mem.eql(u8, message[9 .. len - 2], "scram-sha-256")) {
                 tmp.mechanism = .scram_sha_256;
             } else {
                 tmp.mechanism = .scram_sha_256_plus;
             }
 
-            return BackendMessage{ .auth_sasl = tmp };
+            return .{ .auth_sasl = tmp };
         },
         11 => .unsupported, //authSASLContinue
         12 => .unsupported, //authSASLFinal
@@ -315,7 +312,7 @@ test "BackendMessage.auth_md5_pass good message" {
 }
 
 test "BackendMessage.auth_sasl good message" {
-    const msg = [_]u8{ 'R', 0, 0, 0, 22, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0 };
+    const msg = [_]u8{ 'R', 0, 0, 0, 23, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 };
 
     const des = try deserialize(std.testing.allocator, &msg);
     var tmp = AuthSASL{};
