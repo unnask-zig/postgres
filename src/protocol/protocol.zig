@@ -32,8 +32,8 @@ pub fn startup(allocator: Allocator, stream: std.net.Stream, user: []const u8, p
         .auth_md5_pass => {
             std.debug.print("Auth md5_pass\n", .{});
         },
-        .auth_sasl => |mechanism| {
-            _ = mechanism;
+        .auth_sasl => |obj| {
+            allocator.free(obj.storage);
             std.debug.print("Auth SASL\n", .{});
         },
         else => {

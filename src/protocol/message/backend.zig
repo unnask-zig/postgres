@@ -8,14 +8,18 @@ const AuthMD5Password = struct {
     salt: [4]u8 = undefined,
 };
 
-const SASLMechanism = enum {
-    scram_sha_256,
-    scram_sha_256_plus,
-    unsupported,
-};
-
 const AuthSASL = struct {
-    mechanism: SASLMechanism = .unsupported,
+    sasl_sha_256: bool = false,
+    sasl_sha_256_plus: bool = false,
+
+    fn deserialize(storage: []const u8) !void {
+        const reader = std.io.fixedBufferStream(storage).reader();
+
+        //todo: I have run in to "needing" a non-standard reader. Guess I
+        //will make a ByteBuffer, Reader and Writer
+
+        _ = reader;
+    }
 };
 
 const KeyData = struct {
@@ -122,7 +126,7 @@ const BackendMessage = union(enum) {
 //authSASL
 //authSASLContinue
 //authSASLFinal
-inline fn deserializeAuth(message: []const u8, len: usize) BackendMessage {
+inline fn deserializeAuth(allocator: Allocator, message: []const u8) !BackendMessage {
     // The spec details that this is actually an int32, however, the max
     // value is 12, so no need to do this extra work for the moment.
     const msgType = message[8];
@@ -140,14 +144,7 @@ inline fn deserializeAuth(message: []const u8, len: usize) BackendMessage {
         8 => .unsupported, //authGSSContinue
         9 => .unsupported, //authSSPI
         10 => {
-            var tmp = AuthSASL{};
-            if (std.mem.eql(u8, message[9 .. len - 2], "scram-sha-256")) {
-                tmp.mechanism = .scram_sha_256;
-            } else {
-                tmp.mechanism = .scram_sha_256_plus;
-            }
-
-            return .{ .auth_sasl = tmp };
+            return .{ .auth_sasl = .{ .storage = try allocator.dupe(u8, message[9..]) } };
         },
         11 => .unsupported, //authSASLContinue
         12 => .unsupported, //authSASLFinal
@@ -194,7 +191,7 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
     }
 
     return switch (message[0]) {
-        'R' => return deserializeAuth(message, msgLen),
+        'R' => return try deserializeAuth(allocator, message),
         'K' => {
             return BackendMessage{ .key_data = .{
                 .process = bigToType(i32, message[5..9]),
@@ -204,9 +201,9 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
         '2' => .bind_complete,
         '3' => .close_complete,
         'C' => {
-            const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(tag, message[5..msgLen]);
-            return BackendMessage{ .command_complete = .{ .tag = tag } };
+            //const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
+            //@memcpy(tag, message[5..msgLen]);
+            return .{ .command_complete = .{ .tag = try allocator.dupe(u8, message[5..]) } };
         },
         'd' => {
             const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
@@ -315,16 +312,22 @@ test "BackendMessage.auth_sasl good message" {
     const msg = [_]u8{ 'R', 0, 0, 0, 23, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 };
 
     const des = try deserialize(std.testing.allocator, &msg);
-    var tmp = AuthSASL{};
-    tmp.mechanism = .scram_sha_256;
+    defer std.testing.allocator.free(des.auth_sasl.storage);
+    const tmp = AuthSASL{
+        .storage = &[_]u8{ 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 },
+    };
 
-    try std.testing.expectEqual(des, BackendMessage{ .auth_sasl = tmp });
+    switch (des) {
+        .auth_sasl => |obj| try std.testing.expect(std.mem.eql(u8, obj.storage, tmp.storage)),
+        else => try std.testing.expect(1 == 2),
+    }
 }
 
 test "BackendMessage.key_data good message" {
     const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
 
     const des = try deserialize(std.testing.allocator, &msg);
+
     const tmp = KeyData{
         .process = 257,
         .secret = 258,
