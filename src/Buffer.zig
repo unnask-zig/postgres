@@ -1,3 +1,5 @@
 const std = @import("std");
 
-pub const Buffer = std.ArrayList(u8);
+pub const Buffer = @import("buffer/Buffer.zig");
+pub const Reader = @import("buffer/Reader.zig");
+pub const Writer = @import("buffer/Writer.zig");
