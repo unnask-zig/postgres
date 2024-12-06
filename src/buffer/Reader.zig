@@ -12,3 +12,9 @@ pub fn readUntilDelimiter(self: *Self, delimiter: u8) ![]const u8 {
 
     return self.buffer.bytes[self.pos..idx];
 }
+
+pub fn readInt(self: *Self, comptime T: type) T {
+    defer self.pos += @sizeOf(T);
+
+    return std.mem.bigToNative(T, std.mem.bytesAsValue(T, self.buffer.bytes[self.pos..@sizeOf(T)]).*);
+}
