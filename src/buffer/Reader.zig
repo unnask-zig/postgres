@@ -1,6 +1,7 @@
 const std = @import("std");
 const Buffer = @import("Buffer.zig");
 
+// debating between []const u8 or Buffer...
 buffer: Buffer,
 pos: usize,
 

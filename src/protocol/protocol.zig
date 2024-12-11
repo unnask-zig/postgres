@@ -20,7 +20,13 @@ pub fn startup(allocator: Allocator, stream: std.net.Stream, user: []const u8, p
     var rbuff: [1024]u8 = undefined;
     _ = try stream.read(&rbuff);
 
-    const response = try be.deserialize(allocator, &rbuff);
+    var buf = try Buffer.init(allocator);
+    defer buf.deinit();
+
+    try buf.appendAll(rbuff);
+
+    //const response = try be.deserialize(allocator, &rbuff);
+    const response = try be.deserialize(allocator, buf);
 
     switch (response) {
         .auth_ok => {
