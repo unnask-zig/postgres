@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Buffer = @import("../../buffer.zig").Buffer;
 
 // const FixedBuffer = std.io.FixedBufferStream([]const u8);
 // FixedBuffer.Reader is the type of the reader.
@@ -165,8 +166,8 @@ inline fn createStorageBuffer(allocator: Allocator, len: usize, message: []const
     return storage;
 }
 
-pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
-    if (message.len < 5) {
+pub fn deserialize(allocator: Allocator, message: *Buffer) !BackendMessage {
+    if (message.bytes.len < 5) {
         return PostgresDeserializeError.MsgLength;
     }
 
@@ -186,9 +187,12 @@ pub fn deserialize(allocator: Allocator, message: []const u8) !BackendMessage {
     // I think it will be better to direct read the buffer here, then in the
     // storage reads, use a fixed buffer there.
     const msgLen: usize = @intCast(bigToType(i32, message[1..5]) + 1);
-    if (msgLen > message.len) {
+    if (msgLen > message.bytes.len) {
         return PostgresDeserializeError.BufferLength;
     }
+
+    const msg_reader = message.reader();
+    _ = msg_reader;
 
     return switch (message[0]) {
         'R' => return try deserializeAuth(allocator, message),

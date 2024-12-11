@@ -1,5 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const Reader = @import("Reader.zig");
 
 allocator: Allocator,
 capacity: usize,
@@ -40,6 +41,13 @@ fn allocatedSlice(self: *Self) []u8 {
 
 pub fn getPos(self: *Self) usize {
     return self.pos;
+}
+
+pub fn reader(self: *Self) Reader {
+    return Reader{
+        .buffer = self,
+        .pos = 0,
+    };
 }
 
 pub fn seekBy(self: *Self, amt: usize) BufferError!void {
