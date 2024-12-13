@@ -191,10 +191,10 @@ pub fn deserialize(allocator: Allocator, message: *Buffer) !BackendMessage {
         return PostgresDeserializeError.BufferLength;
     }
 
-    const msg_reader = message.reader();
-    _ = msg_reader;
+    var msg_reader = message.reader();
+    const msg_type = msg_reader.readByte();
 
-    return switch (message[0]) {
+    return switch (msg_type) {
         'R' => return try deserializeAuth(allocator, message),
         'K' => {
             return BackendMessage{ .key_data = .{

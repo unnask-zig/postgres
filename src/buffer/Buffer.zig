@@ -105,8 +105,12 @@ pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
 }
 
 pub fn writeByte(self: *Self, byte: u8) Allocator.Error!void {
-    const end = self.pos + @sizeOf(byte);
+    const end = self.pos + @sizeOf(u8);
     try self.checkCapacity(end);
+    if (self.bytes.len < end) {
+        self.bytes.len = end;
+    }
+    self.bytes[self.pos] = byte;
     self.pos = end;
 }
 
