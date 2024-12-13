@@ -50,6 +50,13 @@ pub fn reader(self: *Self) Reader {
     };
 }
 
+//not sure that I like this "seeking" here.
+//I put it here originally because the length of a message is added at
+//postion 1 in a postgres message, so we could seek backward and write there
+//upon finishing the message without an unnecessary insertion / copy.
+//but this just adds extra unnecessary branching through the rest.
+//Might reapproach this.
+
 pub fn seekBy(self: *Self, amt: usize) BufferError!void {
     const tmp = self.pos +| amt;
     if (tmp > self.bytes.len) {
