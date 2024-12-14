@@ -4,7 +4,6 @@ const Reader = @import("Reader.zig");
 
 allocator: Allocator,
 capacity: usize,
-pos: usize,
 bytes: []u8,
 
 const Self = @This();
@@ -17,7 +16,6 @@ pub fn init(allocator: Allocator) Self {
     return Self{
         .allocator = allocator,
         .capacity = 0,
-        .pos = 0,
         .bytes = &[_]u8{},
     };
 }
@@ -32,15 +30,10 @@ pub fn initCapacity(allocator: Allocator, capacity: usize) Allocator.Error!Self 
 pub fn deinit(self: *Self) void {
     self.allocator.free(self.allocatedSlice());
     self.capacity = 0;
-    self.pos = 0;
 }
 
-fn allocatedSlice(self: *Self) []u8 {
+inline fn allocatedSlice(self: *Self) []u8 {
     return self.bytes.ptr[0..self.capacity];
-}
-
-pub fn getPos(self: *Self) usize {
-    return self.pos;
 }
 
 pub fn reader(self: *Self) Reader {
@@ -48,28 +41,6 @@ pub fn reader(self: *Self) Reader {
         .buffer = self,
         .pos = 0,
     };
-}
-
-//not sure that I like this "seeking" here.
-//I put it here originally because the length of a message is added at
-//postion 1 in a postgres message, so we could seek backward and write there
-//upon finishing the message without an unnecessary insertion / copy.
-//but this just adds extra unnecessary branching through the rest.
-//Might reapproach this.
-
-pub fn seekBy(self: *Self, amt: usize) BufferError!void {
-    const tmp = self.pos +| amt;
-    if (tmp > self.bytes.len) {
-        return BufferError.SeekOutOfBounds;
-    }
-    self.pos += amt;
-}
-
-pub fn seekTo(self: *Self, pos: usize) BufferError!void {
-    if (pos > self.bytes.len) {
-        return BufferError.SeekOutOfBounds;
-    }
-    self.pos = pos;
 }
 
 pub fn ensureCapacity(self: *Self, new_capacity: usize) Allocator.Error!void {
@@ -111,39 +82,50 @@ pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
     try self.ensureCapacity(needed_capacity);
 }
 
-pub fn writeByte(self: *Self, byte: u8) Allocator.Error!void {
-    const end = self.pos + @sizeOf(u8);
+pub fn append(self: *Self, byte: u8) Allocator.Error!void {
+    const pos = self.bytes.len;
+    const end = pos + @sizeOf(u8);
     try self.checkCapacity(end);
-    if (self.bytes.len < end) {
-        self.bytes.len = end;
-    }
-    self.bytes[self.pos] = byte;
-    self.pos = end;
+    self.bytes.len = end;
+    self.bytes[pos] = byte;
 }
 
-pub fn writeAll(self: *Self, bytes: []const u8) Allocator.Error!void {
-    const end = self.pos + bytes.len;
-    try self.checkCapacity(end);
-
-    const slice = self.allocatedSlice()[self.pos..][0..bytes.len];
-    @memcpy(slice[0..bytes.len], bytes);
-    self.pos = end;
-}
-
-pub fn writeInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
+pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
     const count = @divExact(@typeInfo(T).Int.bits, 8);
-    const end = self.pos + count;
+    const end = self.bytes.len + count;
     try self.checkCapacity(end);
 
     std.mem.writeInt(T, &self.bytes[self.pos..][0..count], value, endian);
-    self.pos = end;
+    self.bytes.len = end;
+}
+
+pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
+    const pos = self.bytes.len;
+    const end = pos + bytes.len;
+    try self.checkCapacity(end);
+
+    const slice = self.allocatedSlice()[pos..][0..bytes.len];
+    @memcpy(slice[0..bytes.len], bytes);
+    self.bytes.len = end;
+}
+
+pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
+    std.debug.assert(index < self.bytes.len);
+
+    self.bytes[index] = byte;
+}
+
+pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) void {
+    const count = @divExact(@typeInfo(T).Int.bits, 8);
+    std.debug.assert(self.bytes.len + count < index + count);
+
+    std.mem.writeInt(T, &self.bytes[index..][0..count], value, endian);
 }
 
 test "Buffer.init" {
     var msg = Self.init(std.testing.allocator);
 
     try std.testing.expect(msg.bytes.len == 0);
-    try std.testing.expect(msg.pos == 0);
     try std.testing.expect(msg.capacity == 0);
 
     msg.deinit();
@@ -153,7 +135,6 @@ test "Buffer.initCapacity" {
     var msg: Self = try Self.initCapacity(std.testing.allocator, 50);
 
     try std.testing.expect(msg.bytes.len == 0);
-    try std.testing.expect(msg.pos == 0);
     try std.testing.expect(msg.capacity == 50);
 
     msg.deinit();

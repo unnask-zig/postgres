@@ -29,7 +29,7 @@ pub fn readInt(self: *Self, comptime T: type) T {
 test "readByte good read" {
     var buf = Buffer.init(std.testing.allocator);
     defer buf.deinit();
-    try buf.writeByte('T');
+    try buf.append('T');
 
     var reader = buf.reader();
 
