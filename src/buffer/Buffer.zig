@@ -139,3 +139,28 @@ test "Buffer.initCapacity" {
 
     msg.deinit();
 }
+
+test "Buffer.ensureCapacity growth" {
+    var msg: Self = Self.init(std.testing.allocator);
+    defer msg.deinit();
+
+    try msg.ensureCapacity(10);
+    var slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(10, slice.len);
+    try std.testing.expectEqual(10, msg.capacity);
+
+    try msg.ensureCapacity(20);
+    slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(20, slice.len);
+    try std.testing.expectEqual(20, msg.capacity);
+}
+
+//pub fn ensureCapacity(self: *Self, new_capacity: usize) Allocator.Error!void {
+//pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
+//pub fn append(self: *Self, byte: u8) Allocator.Error!void {
+//pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
+//pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
+//pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
+//pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) void {
