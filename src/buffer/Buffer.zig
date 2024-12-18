@@ -157,6 +157,17 @@ test "Buffer.ensureCapacity growth" {
     try std.testing.expectEqual(20, msg.capacity);
 }
 
+test "Buffer.ensureCapacity already big enough" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 20);
+    defer msg.deinit();
+
+    try msg.ensureCapacity(10);
+    const slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(20, slice.len);
+    try std.testing.expectEqual(20, msg.capacity);
+}
+
 //pub fn ensureCapacity(self: *Self, new_capacity: usize) Allocator.Error!void {
 //pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
 //pub fn append(self: *Self, byte: u8) Allocator.Error!void {
