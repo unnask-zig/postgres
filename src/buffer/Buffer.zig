@@ -32,6 +32,11 @@ pub fn deinit(self: *Self) void {
     self.capacity = 0;
 }
 
+pub fn clear(self: *Self) void {
+    @memset(self.bytes, 0);
+    self.bytes.len = 0;
+}
+
 inline fn allocatedSlice(self: *Self) []u8 {
     return self.bytes.ptr[0..self.capacity];
 }
@@ -91,11 +96,11 @@ pub fn append(self: *Self, byte: u8) Allocator.Error!void {
 }
 
 pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
-    const count = @divExact(@typeInfo(T).Int.bits, 8);
+    const count = @divExact(@typeInfo(T).int.bits, 8);
     const end = self.bytes.len + count;
     try self.checkCapacity(end);
 
-    std.mem.writeInt(T, &self.bytes[self.pos..][0..count], value, endian);
+    std.mem.writeInt(T, self.allocatedSlice()[self.bytes.len..][0..count], value, endian);
     self.bytes.len = end;
 }
 
@@ -168,9 +173,145 @@ test "Buffer.ensureCapacity already big enough" {
     try std.testing.expectEqual(20, msg.capacity);
 }
 
-//pub fn ensureCapacity(self: *Self, new_capacity: usize) Allocator.Error!void {
-//pub fn checkCapacity(self: *Self, needed_capacity: usize) Allocator.Error!void {
-//pub fn append(self: *Self, byte: u8) Allocator.Error!void {
+test "Buffer.ensureCapacity grow it" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 5);
+    defer msg.deinit();
+
+    try msg.ensureCapacity(10);
+    const slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(10, slice.len);
+    try std.testing.expectEqual(10, msg.capacity);
+}
+
+test "Buffer.checkCapacity already big enough" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.checkCapacity(5);
+    const slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(10, slice.len);
+    try std.testing.expectEqual(10, msg.capacity);
+}
+
+test "Buffer.checkCapacity same size" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.checkCapacity(10);
+    const slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(10, slice.len);
+    try std.testing.expectEqual(10, msg.capacity);
+}
+
+test "Buffer.checkCapacity grow it" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.checkCapacity(20);
+    const slice = msg.allocatedSlice();
+
+    try std.testing.expectEqual(20, slice.len);
+    try std.testing.expectEqual(20, msg.capacity);
+}
+
+test "Buffer.append good single append" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.append(244);
+
+    try std.testing.expectEqual(msg.bytes.len, 1);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 244);
+}
+
+test "Buffer.append good multiple append" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.append(244);
+    try msg.append(220);
+
+    try std.testing.expectEqual(msg.bytes.len, 2);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 244);
+    try std.testing.expectEqual(msg.bytes[1], 220);
+}
+
+test "Buffer.append append to grow" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 2);
+    defer msg.deinit();
+
+    try msg.append(244);
+    try msg.append(220);
+    try msg.append(123);
+
+    try std.testing.expectEqual(msg.bytes.len, 3);
+    try std.testing.expectEqual(msg.capacity, 3);
+    try std.testing.expectEqual(msg.bytes[0], 244);
+    try std.testing.expectEqual(msg.bytes[1], 220);
+    try std.testing.expectEqual(msg.bytes[2], 123);
+}
+
+test "Buffer.clear" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.append(244);
+    try msg.append(220);
+    try msg.append(123);
+    msg.clear();
+
+    try std.testing.expectEqual(msg.bytes.len, 0);
+    try std.testing.expectEqual(msg.capacity, 10);
+    msg.bytes.len = 3;
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 0);
+}
+
+test "Buffer.clear already clear" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.append(244);
+    try msg.append(220);
+    try msg.append(123);
+    msg.clear();
+
+    try std.testing.expectEqual(msg.bytes.len, 0);
+    try std.testing.expectEqual(msg.capacity, 10);
+    msg.bytes.len = 3;
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 0);
+    msg.bytes.len = 0;
+
+    msg.clear();
+    try std.testing.expectEqual(msg.bytes.len, 0);
+    try std.testing.expectEqual(msg.capacity, 10);
+    msg.bytes.len = 3;
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 0);
+}
+
+test "Buffer.appendInt little with space" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
 //pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
 //pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
 //pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
