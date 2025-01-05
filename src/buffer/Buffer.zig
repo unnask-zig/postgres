@@ -312,6 +312,35 @@ test "Buffer.appendInt little with space" {
     try std.testing.expectEqual(msg.bytes[2], 3);
     try std.testing.expectEqual(msg.bytes[3], 0);
 }
+
+test "Buffer.appendInt big with space" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.big);
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 3);
+    try std.testing.expectEqual(msg.bytes[2], 0);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
+test "Buffer.appendInt grow it" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 2);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 4);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
 //pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
 //pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
 //pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
