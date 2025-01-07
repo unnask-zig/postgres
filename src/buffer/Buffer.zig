@@ -341,6 +341,25 @@ test "Buffer.appendInt grow it" {
     try std.testing.expectEqual(msg.bytes[3], 0);
 }
 
+test "Buffer.appendInt multiple appends" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 1);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+    try msg.appendInt(i32, 196608, std.builtin.Endian.big);
+
+    try std.testing.expectEqual(msg.bytes.len, 8);
+    try std.testing.expectEqual(msg.capacity, 8);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+    try std.testing.expectEqual(msg.bytes[4], 0);
+    try std.testing.expectEqual(msg.bytes[5], 3);
+    try std.testing.expectEqual(msg.bytes[6], 0);
+    try std.testing.expectEqual(msg.bytes[7], 0);
+}
+
 //pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
 //pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
 //pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
