@@ -360,7 +360,25 @@ test "Buffer.appendInt multiple appends" {
     try std.testing.expectEqual(msg.bytes[7], 0);
 }
 
-//pub fn appendInt(self: *Self, comptime T: type, value: T, endian: std.builtin.Endian) Allocator.Error!void {
+test "Buffer.appendSlice good with space" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    const bytes = [_]u8{ 1, 2, 3, 4, 5, 6 };
+
+    try msg.append(1);
+    try msg.appendSlice(&bytes);
+
+    try std.testing.expectEqual(msg.bytes.len, 7);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 1);
+    try std.testing.expectEqual(msg.bytes[1], 1);
+    try std.testing.expectEqual(msg.bytes[2], 2);
+    try std.testing.expectEqual(msg.bytes[3], 3);
+    try std.testing.expectEqual(msg.bytes[4], 4);
+    try std.testing.expectEqual(msg.bytes[5], 5);
+    try std.testing.expectEqual(msg.bytes[6], 6);
+}
 //pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
 //pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
 //pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) void {
