@@ -379,6 +379,71 @@ test "Buffer.appendSlice good with space" {
     try std.testing.expectEqual(msg.bytes[5], 5);
     try std.testing.expectEqual(msg.bytes[6], 6);
 }
-//pub fn appendSlice(self: *Self, bytes: []const u8) Allocator.Error!void {
+
+test "Buffer.appendSlice good and grow" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 1);
+    defer msg.deinit();
+
+    const bytes = [_]u8{ 1, 2, 3, 4, 5, 6 };
+
+    try msg.appendSlice(&bytes);
+
+    try std.testing.expectEqual(msg.bytes.len, 6);
+    try std.testing.expectEqual(msg.capacity, 6);
+    try std.testing.expectEqual(msg.bytes[0], 1);
+    try std.testing.expectEqual(msg.bytes[1], 2);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 4);
+    try std.testing.expectEqual(msg.bytes[4], 5);
+    try std.testing.expectEqual(msg.bytes[5], 6);
+}
+
+test "Buffer.appendSlice append after slice and grow" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 1);
+    defer msg.deinit();
+
+    const bytes = [_]u8{ 1, 2, 3, 4, 5, 6 };
+
+    try msg.appendSlice(&bytes);
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    try std.testing.expectEqual(msg.bytes.len, 10);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 1);
+    try std.testing.expectEqual(msg.bytes[1], 2);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 4);
+    try std.testing.expectEqual(msg.bytes[4], 5);
+    try std.testing.expectEqual(msg.bytes[5], 6);
+    try std.testing.expectEqual(msg.bytes[6], 0);
+    try std.testing.expectEqual(msg.bytes[7], 0);
+    try std.testing.expectEqual(msg.bytes[8], 3);
+    try std.testing.expectEqual(msg.bytes[9], 0);
+}
+
+test "Buffer.appendSlice append two slices" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 1);
+    defer msg.deinit();
+
+    const bytes = [_]u8{ 1, 2, 3, 4, 5, 6 };
+
+    try msg.appendSlice(&bytes);
+    try msg.appendSlice(&bytes);
+
+    try std.testing.expectEqual(msg.bytes.len, 12);
+    try std.testing.expectEqual(msg.capacity, 12);
+    try std.testing.expectEqual(msg.bytes[0], 1);
+    try std.testing.expectEqual(msg.bytes[1], 2);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 4);
+    try std.testing.expectEqual(msg.bytes[4], 5);
+    try std.testing.expectEqual(msg.bytes[5], 6);
+    try std.testing.expectEqual(msg.bytes[6], 1);
+    try std.testing.expectEqual(msg.bytes[7], 2);
+    try std.testing.expectEqual(msg.bytes[8], 3);
+    try std.testing.expectEqual(msg.bytes[9], 4);
+    try std.testing.expectEqual(msg.bytes[10], 5);
+    try std.testing.expectEqual(msg.bytes[11], 6);
+}
 //pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
 //pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) void {
