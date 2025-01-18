@@ -121,11 +121,16 @@ pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
 }
 
 pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) void {
-    const count = @divExact(@typeInfo(T).Int.bits, 8);
-    std.debug.assert(self.bytes.len + count < index + count);
+    const count = @divExact(@typeInfo(T).int.bits, 8);
+    std.debug.assert(index + count <= self.bytes.len);
 
-    std.mem.writeInt(T, &self.bytes[index..][0..count], value, endian);
+    std.mem.writeInt(T, self.bytes[index..][0..count], value, endian);
 }
+
+//TODO replaceSliceAssumeBounds
+//TODO replace
+//TODO replaceInt
+//TODO replaceSlice
 
 test "Buffer.init" {
     var msg = Self.init(std.testing.allocator);
@@ -445,5 +450,33 @@ test "Buffer.appendSlice append two slices" {
     try std.testing.expectEqual(msg.bytes[10], 5);
     try std.testing.expectEqual(msg.bytes[11], 6);
 }
-//pub fn replaceAssumeBounds(self: *Self, index: usize, byte: u8) void {
-//pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) void {
+
+test "Buffer.replaceAssumeBounds good" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+    msg.replaceAssumeBounds(1, 10);
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 10);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
+test "Buffer.replaceIntAssumeBounds good" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 574393472, std.builtin.Endian.little);
+    msg.replaceIntAssumeBounds(i32, 0, 196608, std.builtin.Endian.little);
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
