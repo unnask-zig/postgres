@@ -9,7 +9,7 @@ bytes: []u8,
 const Self = @This();
 
 const BufferError = error{
-    SeekOutOfBounds,
+    OutOfBounds,
 };
 
 pub fn init(allocator: Allocator) Self {
@@ -127,7 +127,6 @@ pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value
     std.mem.writeInt(T, self.bytes[index..][0..count], value, endian);
 }
 
-//TODO replaceSliceAssumeBounds
 pub fn replaceSliceAssumeBounds(self: *Self, index: usize, bytes: []const u8) void {
     const end = index + bytes.len;
     std.debug.assert(end <= self.bytes.len);
@@ -136,6 +135,13 @@ pub fn replaceSliceAssumeBounds(self: *Self, index: usize, bytes: []const u8) vo
 }
 
 //TODO replace
+pub fn replace(self: *Self, index: usize, byte: u8) BufferError!void {
+    if (index > self.bytes.len) {
+        return BufferError.OutOfBounds;
+    }
+
+    self.replaceAssumeBounds(index, byte);
+}
 
 //TODO replaceInt
 //TODO replaceSlice
