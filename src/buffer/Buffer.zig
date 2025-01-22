@@ -128,6 +128,13 @@ pub fn replaceIntAssumeBounds(self: *Self, comptime T: type, index: usize, value
 }
 
 //TODO replaceSliceAssumeBounds
+pub fn replaceSliceAssumeBounds(self: *Self, index: usize, bytes: []const u8) void {
+    const end = index + bytes.len;
+    std.debug.assert(end <= self.bytes.len);
+
+    @memcpy(self.bytes[index..][0..end], bytes);
+}
+
 //TODO replace
 
 //TODO replaceInt
@@ -480,4 +487,21 @@ test "Buffer.replaceIntAssumeBounds good" {
     try std.testing.expectEqual(msg.bytes[1], 0);
     try std.testing.expectEqual(msg.bytes[2], 3);
     try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
+test "Buffer.replaceSliceAssumeBounds good" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    const rep = [_]u8{ 1, 2, 3, 4 };
+    msg.replaceSliceAssumeBounds(0, &rep);
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 1);
+    try std.testing.expectEqual(msg.bytes[1], 2);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 4);
 }
