@@ -134,7 +134,6 @@ pub fn replaceSliceAssumeBounds(self: *Self, index: usize, bytes: []const u8) vo
     @memcpy(self.bytes[index..][0..end], bytes);
 }
 
-//TODO replace
 pub fn replace(self: *Self, index: usize, byte: u8) BufferError!void {
     if (index > self.bytes.len) {
         return BufferError.OutOfBounds;
@@ -143,8 +142,23 @@ pub fn replace(self: *Self, index: usize, byte: u8) BufferError!void {
     self.replaceAssumeBounds(index, byte);
 }
 
-//TODO replaceInt
-//TODO replaceSlice
+pub fn replaceInt(self: *Self, comptime T: type, index: usize, value: T, endian: std.builtin.Endian) BufferError!void {
+    const end = @divExact(@typeInfo(T).int.bits, 8);
+    if (index + end > self.bytes.len) {
+        return BufferError.OutOfBounds;
+    }
+
+    std.mem.writeInt(T, self.bytes[index..][0..end], value, endian);
+}
+
+pub fn replaceSlice(self: *Self, index: usize, bytes: []const u8) BufferError!void {
+    const end = index + bytes.len;
+    if (end > self.bytes.len) {
+        return BufferError.OutOfBounds;
+    }
+
+    @memcpy(self.bytes[index..][0..end], bytes);
+}
 
 test "Buffer.init" {
     var msg = Self.init(std.testing.allocator);
@@ -510,4 +524,112 @@ test "Buffer.replaceSliceAssumeBounds good" {
     try std.testing.expectEqual(msg.bytes[1], 2);
     try std.testing.expectEqual(msg.bytes[2], 3);
     try std.testing.expectEqual(msg.bytes[3], 4);
+}
+
+test "Buffer.replace good" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    msg.replace(1, 5) catch {
+        try std.testing.expectEqual(true, false);
+    };
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 5);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
+test "Buffer.replace oob" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    msg.replace(5, 5) catch |err| {
+        try std.testing.expectEqual(BufferError.OutOfBounds, err);
+    };
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
+test "Buffer.replaceInt good" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 574393472, std.builtin.Endian.little);
+    msg.replaceInt(i32, 0, 196608, std.builtin.Endian.little) catch {
+        try std.testing.expectEqualStrings("Expected No Error", "But got one");
+    };
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
+}
+
+test "Buffer.replaceInt oob" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 574393472, std.builtin.Endian.little);
+    msg.replaceInt(i32, 1, 196608, std.builtin.Endian.little) catch |err| {
+        try std.testing.expectEqual(BufferError.OutOfBounds, err);
+    };
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 128);
+    try std.testing.expectEqual(msg.bytes[1], 140);
+    try std.testing.expectEqual(msg.bytes[2], 60);
+    try std.testing.expectEqual(msg.bytes[3], 34);
+}
+
+test "Buffer.replaceSlice good" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    const rep = [_]u8{ 1, 2, 3, 4 };
+    msg.replaceSlice(0, &rep) catch {
+        try std.testing.expectEqualStrings("Expected No Error", "But got one");
+    };
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 1);
+    try std.testing.expectEqual(msg.bytes[1], 2);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 4);
+}
+
+test "Buffer.replaceSlice oob" {
+    var msg: Self = try Self.initCapacity(std.testing.allocator, 10);
+    defer msg.deinit();
+
+    try msg.appendInt(i32, 196608, std.builtin.Endian.little);
+
+    const rep = [_]u8{ 1, 2, 3, 4 };
+    msg.replaceSlice(1, &rep) catch |err| {
+        try std.testing.expectEqual(BufferError.OutOfBounds, err);
+    };
+
+    try std.testing.expectEqual(msg.bytes.len, 4);
+    try std.testing.expectEqual(msg.capacity, 10);
+    try std.testing.expectEqual(msg.bytes[0], 0);
+    try std.testing.expectEqual(msg.bytes[1], 0);
+    try std.testing.expectEqual(msg.bytes[2], 3);
+    try std.testing.expectEqual(msg.bytes[3], 0);
 }
