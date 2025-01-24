@@ -1,6 +1,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Buffer = @import("../../buffer.zig").Buffer;
+const Buffer = @import("../../buffer/Buffer.zig");
+const Reader = @import("../../buffer/Reader.zig");
 
 // const FixedBuffer = std.io.FixedBufferStream([]const u8);
 // FixedBuffer.Reader is the type of the reader.
@@ -127,7 +128,7 @@ const BackendMessage = union(enum) {
 //authSASL
 //authSASLContinue
 //authSASLFinal
-inline fn deserializeAuth(allocator: Allocator, message: []const u8) !BackendMessage {
+inline fn deserializeAuth(allocator: Allocator, message: *Buffer) !BackendMessage {
     // The spec details that this is actually an int32, however, the max
     // value is 12, so no need to do this extra work for the moment.
     const msgType = message[8];
@@ -171,28 +172,16 @@ pub fn deserialize(allocator: Allocator, message: *Buffer) !BackendMessage {
         return PostgresDeserializeError.MsgLength;
     }
 
-    // Wondering if this is actually the way to go. Fixed buffer almost
-    // definitely adds overhead, but it is also easier to manage.
-    //var fbs = FixedBuffer{
-    //    .buffer = message,
-    //    .pos = 1,
-    //};
-    //var reader = fbs.reader();
-    //const msgLen = try reader.readIntBig(i32);
-
-    //if (msgLen > message.len) {
-    //    return PostgresDeserializeError.BufferLength;
-    //}
+    var msg_reader = message.reader();
+    const msg_type = msg_reader.readByte();
 
     // I think it will be better to direct read the buffer here, then in the
     // storage reads, use a fixed buffer there.
-    const msgLen: usize = @intCast(bigToType(i32, message[1..5]) + 1);
-    if (msgLen > message.bytes.len) {
+    // const msg_len: usize = @intCast(bigToType(i32, message[1..5]) + 1);
+    const msg_len: usize = @intCast(msg_reader.readInt(i32) + 1);
+    if (msg_len > message.bytes.len) {
         return PostgresDeserializeError.BufferLength;
     }
-
-    var msg_reader = message.reader();
-    const msg_type = msg_reader.readByte();
 
     return switch (msg_type) {
         'R' => return try deserializeAuth(allocator, message),
@@ -205,69 +194,69 @@ pub fn deserialize(allocator: Allocator, message: *Buffer) !BackendMessage {
         '2' => .bind_complete,
         '3' => .close_complete,
         'C' => {
-            //const tag = try allocator.alloc(u8, @intCast(msgLen - 5));
-            //@memcpy(tag, message[5..msgLen]);
+            //const tag = try allocator.alloc(u8, @intCast(msg_len - 5));
+            //@memcpy(tag, message[5..msg_len]);
             return .{ .command_complete = .{ .tag = try allocator.dupe(u8, message[5..]) } };
         },
         'd' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .copy_data = .{ .storage = storage } };
         },
         'c' => .copy_done,
         'G' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .copy_in_response = .{ .storage = storage } };
         },
         'H' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .copy_out_response = .{ .storage = storage } };
         },
         'W' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .copy_both_response = .{ .storage = storage } };
         },
         'D' => {
-            return BackendMessage{ .data_row = .{ .storage = try createStorageBuffer(allocator, @intCast(msgLen), message) } };
+            return BackendMessage{ .data_row = .{ .storage = try createStorageBuffer(allocator, @intCast(msg_len), message) } };
         },
         'I' => .empty_query_response,
         'E' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .error_response = .{ .storage = storage } };
         },
         'V' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .function_call_response = .{ .storage = storage } };
         },
         'v' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .negotiate_protocol_version = .{ .storage = storage } };
         },
         'n' => .no_data,
         'N' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .notice_response = .{ .storage = storage } };
         },
         'A' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .notification_response = .{ .storage = storage } };
         },
         't' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .parameter_description = .{ .storage = storage } };
         },
         'S' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .parameter_status = .{ .storage = storage } };
         },
         'p' => .parse_complete,
@@ -278,8 +267,8 @@ pub fn deserialize(allocator: Allocator, message: *Buffer) !BackendMessage {
             } };
         },
         'T' => {
-            const storage = try allocator.alloc(u8, @intCast(msgLen - 5));
-            @memcpy(storage, message[5..msgLen]);
+            const storage = try allocator.alloc(u8, @intCast(msg_len - 5));
+            @memcpy(storage, message[5..msg_len]);
             return BackendMessage{ .row_description = .{ .storage = storage } };
         },
         else => .unsupported,
