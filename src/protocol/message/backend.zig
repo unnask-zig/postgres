@@ -282,60 +282,70 @@ test "BackendMessage.auth_sasl good message" {
     var buf = try bufferFromSlice(std.testing.allocator, &msg);
     defer buf.deinit();
 
-    const des = try deserialize(&buf);
+    var des = try deserialize(&buf);
     const mechanism = [_]u8{ 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 };
 
     switch (des) {
         .auth_sasl => |*obj| {
-            const mech = obj.reader.dupeUntilEnd(std.testing.allocator);
-            try std.testing.expect(std.mem.eql(u8, mech, mechanism));
+            const mech = obj.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, mech, &mechanism));
         },
         else => try std.testing.expect(1 == 2),
     }
 }
 
-//test "BackendMessage.key_data good message" {
-//    const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    const tmp = KeyData{
-//        .process = 257,
-//        .secret = 258,
-//    };
-//
-//    try std.testing.expectEqual(des, BackendMessage{ .key_data = tmp });
-//}
-//
-//test "BackendMessage.bind_complete good message" {
-//    const msg = [_]u8{ '2', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.bind_complete);
-//}
-//
-//test "BackendMessage.close_complete good message" {
-//    const msg = [_]u8{ '3', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.close_complete);
-//}
-//
-//test "BackendMessage.command_complete good message" {
-//    const msg = [_]u8{ 'C', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.command_complete.tag);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.command_complete);
-//    switch (des) {
-//        .command_complete => |cc| try std.testing.expect(std.mem.eql(u8, cc.tag, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
+test "BackendMessage.key_data good message" {
+    const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    const tmp = KeyData{
+        .process = 257,
+        .secret = 258,
+    };
+
+    try std.testing.expectEqual(des, BackendMessage{ .key_data = tmp });
+}
+
+test "BackendMessage.bind_complete good message" {
+    const msg = [_]u8{ '2', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.bind_complete);
+}
+
+test "BackendMessage.close_complete good message" {
+    const msg = [_]u8{ '3', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.close_complete);
+}
+
+test "BackendMessage.command_complete good message" {
+    const msg = [_]u8{ 'C', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.command_complete);
+    switch (des) {
+        .command_complete => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
 //test "BackendMessage.copy_data good message" {
 //    const msg = [_]u8{ 'd', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
 //
