@@ -277,21 +277,23 @@ test "BackendMessage.auth_md5_pass good message" {
     try std.testing.expectEqual(des, BackendMessage{ .auth_md5_pass = tmp });
 }
 
-//test "BackendMessage.auth_sasl good message" {
-//    const msg = [_]u8{ 'R', 0, 0, 0, 23, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.auth_sasl.reader);
-//    const tmp = AuthSASL{
-//        .reader = &[_]u8{ 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 },
-//    };
-//
-//    switch (des) {
-//        .auth_sasl => |obj| try std.testing.expect(std.mem.eql(u8, obj.reader, tmp.reader)),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
+test "BackendMessage.auth_sasl good message" {
+    const msg = [_]u8{ 'R', 0, 0, 0, 23, 0, 0, 0, 10, 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+    const mechanism = [_]u8{ 's', 'c', 'r', 'a', 'm', '-', 's', 'h', 'a', '-', '2', '5', '6', 0, 0 };
+
+    switch (des) {
+        .auth_sasl => |*obj| {
+            const mech = obj.reader.dupeUntilEnd(std.testing.allocator);
+            try std.testing.expect(std.mem.eql(u8, mech, mechanism));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
 //test "BackendMessage.key_data good message" {
 //    const msg = [_]u8{ 'K', 0, 0, 0, 12, 0, 0, 1, 1, 0, 0, 1, 2 };
 //
