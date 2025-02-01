@@ -15,7 +15,10 @@ const AuthSASL = struct {
     sasl_sha_256_plus: bool = false,
     reader: Reader,
 
-    fn deserialize(reader: []const u8) !void {
+    fn deserialize(reader: Reader) !void {
+
+        const mechanisms
+
         //const reader = std.io.fixedBufferStream(reader).reader();
 
         //todo: I have run in to "needing" a non-standard reader. Guess I

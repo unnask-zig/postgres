@@ -34,12 +34,25 @@ pub fn readUntilDelimiter(self: *Self, delimiter: u8) ![]const u8 {
     return self.buffer.bytes[self.pos..idx];
 }
 
+pub fn dupeUntilDelimiter(self: *Self, delimiter: u8) ![]const u8 {
+    const idx = std.mem.indexOfScalar(u8, self.buffer.bytes[self.pos..], delimiter) + 1;
+    const tmp = self.buffer.bytes[self.pos..idx];
+    defer self.pos = idx;
+
+    return self.buffer.allocator.dupe(u8, tmp);
+}
+
 pub fn readUntilEnd(self: *Self) []const u8 {
     defer self.pos = self.buffer.bytes.len;
 
     return self.buffer.bytes[self.pos..];
 }
 
+//TODO: I am well aware of the inconsistency in this API
+// Just deciding if I like using the Buffer allocator better, or if I like
+// passing passing it in better. Will probably come down to use.
+// Using the Buffers allocator more tighly couples these things together,
+// but I don't think that matters for this.
 pub fn dupeUntilEnd(self: *Self, allocator: Allocator) ![]u8 {
     const tmp = self.buffer.bytes[self.pos..];
     defer self.pos += tmp.len;
