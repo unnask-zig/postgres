@@ -346,222 +346,287 @@ test "BackendMessage.command_complete good message" {
     }
 }
 
-//test "BackendMessage.copy_data good message" {
-//    const msg = [_]u8{ 'd', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.copy_data.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_data);
-//    switch (des) {
-//        .copy_data => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.copy_done good message" {
-//    const msg = [_]u8{ 'c', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.copy_done);
-//}
-//
-//test "BackendMessage.copy_in_response good message" {
-//    const msg = [_]u8{ 'G', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.copy_in_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_in_response);
-//    switch (des) {
-//        .copy_in_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.copy_out_response good message" {
-//    const msg = [_]u8{ 'H', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.copy_out_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_out_response);
-//    switch (des) {
-//        .copy_out_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.copy_both_response good message" {
-//    const msg = [_]u8{ 'W', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.copy_both_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_both_response);
-//    switch (des) {
-//        .copy_both_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.data_row good message" {
-//    const msg = [_]u8{ 'D', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.data_row.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.data_row);
-//    switch (des) {
-//        .data_row => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.empty_query_response good message" {
-//    const msg = [_]u8{ 'I', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.empty_query_response);
-//}
-//
-//test "BackendMessage.error_response good message" {
-//    const msg = [_]u8{ 'E', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.error_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.error_response);
-//    switch (des) {
-//        .error_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.function_call_response good message" {
-//    const msg = [_]u8{ 'V', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.function_call_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.function_call_response);
-//    switch (des) {
-//        .function_call_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.negotiate_protocol_version good message" {
-//    const msg = [_]u8{ 'v', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.negotiate_protocol_version.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.negotiate_protocol_version);
-//    switch (des) {
-//        .negotiate_protocol_version => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.no_data good message" {
-//    const msg = [_]u8{ 'n', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.no_data);
-//}
-//
-//test "BackendMessage.notice_response good message" {
-//    const msg = [_]u8{ 'N', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.notice_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.notice_response);
-//    switch (des) {
-//        .notice_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.notification_response good message" {
-//    const msg = [_]u8{ 'A', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.notification_response.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.notification_response);
-//    switch (des) {
-//        .notification_response => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.parameter_description good message" {
-//    const msg = [_]u8{ 't', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.parameter_description.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_description);
-//    switch (des) {
-//        .parameter_description => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.parameter_status good message" {
-//    const msg = [_]u8{ 'S', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.parameter_status.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_status);
-//    switch (des) {
-//        .parameter_status => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
-//
-//test "BackendMessage.parse_complete good message" {
-//    const msg = [_]u8{ 'p', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.parse_complete);
-//}
-//
-//test "BackendMessage.portal_suspended good message" {
-//    const msg = [_]u8{ 's', 0, 0, 0, 4 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//
-//    try std.testing.expectEqual(des, BackendMessage.portal_suspended);
-//}
-//
-//test "BackendMessage.ready_for_query good message" {
-//    const msg = [_]u8{ 'Z', 0, 0, 0, 5, 0 };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    const tmp = ReadyForQuery{
-//        .status = 0,
-//    };
-//
-//    try std.testing.expectEqual(des, BackendMessage{ .ready_for_query = tmp });
-//}
-//
-//test "BackendMessage.row_description good message" {
-//    const msg = [_]u8{ 'T', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
-//
-//    const des = try deserialize(std.testing.allocator, &msg);
-//    defer std.testing.allocator.free(des.row_description.reader);
-//
-//    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.row_description);
-//    switch (des) {
-//        .row_description => |cc| try std.testing.expect(std.mem.eql(u8, cc.reader, "insert")),
-//        else => try std.testing.expect(1 == 2),
-//    }
-//}
+test "BackendMessage.copy_data good message" {
+    const msg = [_]u8{ 'd', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_data);
+    switch (des) {
+        .copy_data => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.copy_done good message" {
+    const msg = [_]u8{ 'c', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.copy_done);
+}
+
+test "BackendMessage.copy_in_response good message" {
+    const msg = [_]u8{ 'G', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_in_response);
+    switch (des) {
+        .copy_in_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.copy_out_response good message" {
+    const msg = [_]u8{ 'H', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_out_response);
+    switch (des) {
+        .copy_out_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.copy_both_response good message" {
+    const msg = [_]u8{ 'W', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.copy_both_response);
+    switch (des) {
+        .copy_both_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.data_row good message" {
+    const msg = [_]u8{ 'D', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.data_row);
+    switch (des) {
+        .data_row => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.empty_query_response good message" {
+    const msg = [_]u8{ 'I', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.empty_query_response);
+}
+
+test "BackendMessage.error_response good message" {
+    const msg = [_]u8{ 'E', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.error_response);
+    switch (des) {
+        .error_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.function_call_response good message" {
+    const msg = [_]u8{ 'V', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.function_call_response);
+    switch (des) {
+        .function_call_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.negotiate_protocol_version good message" {
+    const msg = [_]u8{ 'v', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.negotiate_protocol_version);
+    switch (des) {
+        .negotiate_protocol_version => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.no_data good message" {
+    const msg = [_]u8{ 'n', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.no_data);
+}
+
+test "BackendMessage.notice_response good message" {
+    const msg = [_]u8{ 'N', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.notice_response);
+    switch (des) {
+        .notice_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.notification_response good message" {
+    const msg = [_]u8{ 'A', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.notification_response);
+    switch (des) {
+        .notification_response => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.parameter_description good message" {
+    const msg = [_]u8{ 't', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_description);
+    switch (des) {
+        .parameter_description => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.parameter_status good message" {
+    const msg = [_]u8{ 'S', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.parameter_status);
+    switch (des) {
+        .parameter_status => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
+
+test "BackendMessage.parse_complete good message" {
+    const msg = [_]u8{ 'p', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.parse_complete);
+}
+
+test "BackendMessage.portal_suspended good message" {
+    const msg = [_]u8{ 's', 0, 0, 0, 4 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    try std.testing.expectEqual(des, BackendMessage.portal_suspended);
+}
+
+test "BackendMessage.ready_for_query good message" {
+    const msg = [_]u8{ 'Z', 0, 0, 0, 5, 0 };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    const des = try deserialize(&buf);
+
+    const tmp = ReadyForQuery{
+        .status = 0,
+    };
+
+    try std.testing.expectEqual(des, BackendMessage{ .ready_for_query = tmp });
+}
+
+test "BackendMessage.row_description good message" {
+    const msg = [_]u8{ 'T', 0, 0, 0, 10, 'i', 'n', 's', 'e', 'r', 't' };
+    var buf = try bufferFromSlice(std.testing.allocator, &msg);
+    defer buf.deinit();
+
+    var des = try deserialize(&buf);
+
+    try std.testing.expect(@as(BackendMessage, des) == BackendMessage.row_description);
+    switch (des) {
+        .row_description => |*cc| {
+            const tag = cc.reader.readUntilEnd();
+            try std.testing.expect(std.mem.eql(u8, tag, "insert"));
+        },
+        else => try std.testing.expect(1 == 2),
+    }
+}
