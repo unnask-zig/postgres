@@ -11,20 +11,25 @@ const AuthMD5Password = struct {
 };
 
 const AuthSASL = struct {
-    sasl_sha_256: bool = false,
-    sasl_sha_256_plus: bool = false,
-    reader: Reader,
+    scram_sha_256: bool = false,
+    scram_sha_256_plus: bool = false,
 
-    fn deserialize(reader: Reader) !void {
-        const mechanisms = reader.readUntilDelimiter(0);
+    // Technically, the list is supposed to return in the order preferred
+    // by the server, and we should track that. For now, nah.
+    fn deserialize(reader: Reader) AuthSASL {
+        var ret: AuthSASL = .{};
 
-        _ = mechanisms;
+        while (reader.peek() != 0) {
+            const mechanism = reader.readUntilDelimiter(0);
 
-        //const reader = std.io.fixedBufferStream(reader).reader();
+            if (std.mem.eql(u8, mechanism, "SCRAM-SHA-256")) {
+                ret.scram_sha_256 = true;
+            } else if (std.mem.eql(u8, mechanism, "SCRAM-SHA-256-PLUS")) {
+                ret.scram_sha_256_plus = true;
+            }
+        }
 
-        //todo: I have run in to "needing" a non-standard reader. Guess I
-        //will make a ByteBuffer, Reader and Writer
-
+        return ret;
     }
 };
 

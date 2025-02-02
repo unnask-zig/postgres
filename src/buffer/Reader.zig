@@ -8,6 +8,15 @@ pos: usize,
 
 const Self = @This();
 
+const ReaderError = error{
+    StartIndexOutOfRange,
+    EndIndexOutOfRange,
+};
+
+pub fn peek(self: *Self) u8 {
+    return self.buffer.bytes[self.pos];
+}
+
 pub fn readByte(self: *Self) u8 {
     defer self.pos += 1;
 
