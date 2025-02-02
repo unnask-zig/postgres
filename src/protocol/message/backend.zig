@@ -16,15 +16,15 @@ const AuthSASL = struct {
     reader: Reader,
 
     fn deserialize(reader: Reader) !void {
+        const mechanisms = reader.readUntilDelimiter(0);
 
-        const mechanisms
+        _ = mechanisms;
 
         //const reader = std.io.fixedBufferStream(reader).reader();
 
         //todo: I have run in to "needing" a non-standard reader. Guess I
         //will make a ByteBuffer, Reader and Writer
 
-        _ = reader;
     }
 };
 
